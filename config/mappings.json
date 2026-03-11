@@ -88,24 +88,22 @@
       "enabled": true,
       "analog": {
         "rightStickHorizontalActions": {
-          "enabled": false,
+          "enabled": true,
           "deadzone": 0.62,
           "edgeTrigger": true,
           "leftAction": {
             "type": "keystroke",
-            "keyCode": 123,
-            "modifiers": [
-              "control"
-            ],
-            "description": "Move one macOS workspace left (Control+Left Arrow)"
+            "keyCode": 44,
+            "modifiers": [],
+            "description": "Send slash (/)"
           },
           "rightAction": {
             "type": "keystroke",
-            "keyCode": 124,
+            "keyCode": 21,
             "modifiers": [
-              "control"
+              "shift"
             ],
-            "description": "Move one macOS workspace right (Control+Right Arrow)"
+            "description": "Send dollar sign ($)"
           }
         }
       },

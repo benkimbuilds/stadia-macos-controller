@@ -11,6 +11,7 @@ Reduce cognitive load while using dictation + controller together by making butt
 - `X`: send `Tab`, primarily as the `L2` companion for app switching (`Cmd+Tab`).
 - Left thumbstick click: intentionally unassigned for now because click-plus-scroll on the same stick felt noisy in practice.
 - D-pad `Up/Down/Left/Right`: global arrow-key navigation via `alwaysOn`.
+- Right stick horizontal tilt: Ghostty-only punctuation shortcuts (`Left` = `/`, `Right` = `$`).
 - `Y`: `Cmd+Shift+G`.
 
 ## Why This Layout
@@ -20,7 +21,7 @@ Reduce cognitive load while using dictation + controller together by making butt
 - `L2` + `X` is a low-risk modifier experiment because it uses a held modifier with a discrete button, not an analog stick.
 - Left thumbstick click is intentionally left unused until there is a cleaner role for it.
 - The D-pad is reserved for consistent global navigation across apps.
-- The right stick is currently reserved until there is a reliable, low-risk use for it on macOS.
+- The right stick is a better place for Ghostty-only punctuation than the D-pad because it avoids interfering with global navigation.
 
 ## Notes
 - `L2`, `X`, `R2`, D-pad arrows, and left-stick vertical scroll are configured in the top-level `alwaysOn` section.

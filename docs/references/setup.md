@@ -53,7 +53,7 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
   - Left stick `Y`: vertical scroll (analog; deadzone/rate-limited)
   - D-pad `Up/Down/Left/Right`: send arrow keys
 - Ghostty defaults:
-  - Right stick: currently unassigned
+  - Right stick horizontal tilt: `Left` sends `/`, `Right` sends `$`
   - `Options`: close focused split surface (`Cmd+W`)
   - `Menu`: open `/model`
   - `Y`: send `Cmd+Shift+G`
