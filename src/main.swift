@@ -83,6 +83,7 @@ struct AnalogConfig: Decodable {
     let leftStickVerticalScroll: StickVerticalScrollConfig?
     let rightStickVerticalScroll: StickVerticalScrollConfig?
     let rightStickPointer: StickPointerConfig?
+    let rightStickHorizontalActions: StickHorizontalActionConfig?
 }
 
 struct StickVerticalScrollConfig: Decodable {
@@ -104,6 +105,15 @@ struct StickPointerConfig: Decodable {
     let responseExponent: Double?
     let invertX: Bool?
     let invertY: Bool?
+}
+
+struct StickHorizontalActionConfig: Decodable {
+    let enabled: Bool?
+    let deadzone: Double?
+    let repeatIntervalMs: Int?
+    let edgeTrigger: Bool?
+    let leftAction: ActionConfig?
+    let rightAction: ActionConfig?
 }
 
 struct MappingConfig: Decodable {
@@ -209,28 +219,7 @@ struct ConfigLoader {
 
         for (profileName, profile) in config.profiles {
             for (button, mapping) in profile.mappings {
-                switch mapping.action.type {
-                case .keystroke:
-                    guard mapping.action.keyCode != nil else {
-                        throw BridgeError.configValidationFailed("Profile '\(profileName)' button '\(button)' keystroke action requires keyCode")
-                    }
-                case .holdKeystroke:
-                    guard mapping.action.keyCode != nil else {
-                        throw BridgeError.configValidationFailed("Profile '\(profileName)' button '\(button)' holdKeystroke action requires keyCode")
-                    }
-                case .shell:
-                    guard let command = mapping.action.command, !command.isEmpty else {
-                        throw BridgeError.configValidationFailed("Profile '\(profileName)' button '\(button)' shell action requires command")
-                    }
-                case .applescript:
-                    guard let script = mapping.action.script, !script.isEmpty else {
-                        throw BridgeError.configValidationFailed("Profile '\(profileName)' button '\(button)' applescript action requires script")
-                    }
-        case .text:
-            guard let text = mapping.action.text, !text.isEmpty else {
-                throw BridgeError.configValidationFailed("Profile '\(profileName)' button '\(button)' text action requires text")
-            }
-        }
+                try validateAction(mapping.action, context: "Profile '\(profileName)' button '\(button)'")
             }
 
             if let analogConfig = profile.analog {
@@ -243,6 +232,38 @@ struct ConfigLoader {
                 if let pointer = analogConfig.rightStickPointer {
                     try validateStickPointerConfig(pointer, profileName: profileName, configName: "rightStickPointer")
                 }
+                if let horizontalActions = analogConfig.rightStickHorizontalActions {
+                    try validateStickHorizontalActionConfig(
+                        horizontalActions,
+                        profileName: profileName,
+                        configName: "rightStickHorizontalActions"
+                    )
+                }
+            }
+        }
+    }
+
+    private static func validateAction(_ action: ActionConfig, context: String) throws {
+        switch action.type {
+        case .keystroke:
+            guard action.keyCode != nil else {
+                throw BridgeError.configValidationFailed("\(context) keystroke action requires keyCode")
+            }
+        case .holdKeystroke:
+            guard action.keyCode != nil else {
+                throw BridgeError.configValidationFailed("\(context) holdKeystroke action requires keyCode")
+            }
+        case .shell:
+            guard let command = action.command, !command.isEmpty else {
+                throw BridgeError.configValidationFailed("\(context) shell action requires command")
+            }
+        case .applescript:
+            guard let script = action.script, !script.isEmpty else {
+                throw BridgeError.configValidationFailed("\(context) applescript action requires script")
+            }
+        case .text:
+            guard let text = action.text, !text.isEmpty else {
+                throw BridgeError.configValidationFailed("\(context) text action requires text")
             }
         }
     }
@@ -299,6 +320,29 @@ struct ConfigLoader {
         if let responseExponent = pointer.responseExponent, responseExponent <= 0 {
             throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) responseExponent must be > 0")
         }
+    }
+
+    private static func validateStickHorizontalActionConfig(
+        _ config: StickHorizontalActionConfig,
+        profileName: String,
+        configName: String
+    ) throws {
+        if let deadzone = config.deadzone, deadzone < 0 || deadzone >= 1 {
+            throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) deadzone must be >= 0 and < 1")
+        }
+        if let repeatIntervalMs = config.repeatIntervalMs, repeatIntervalMs < 1 {
+            throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) repeatIntervalMs must be >= 1")
+        }
+
+        guard let leftAction = config.leftAction else {
+            throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) requires leftAction")
+        }
+        guard let rightAction = config.rightAction else {
+            throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) requires rightAction")
+        }
+
+        try validateAction(leftAction, context: "Profile '\(profileName)' \(configName) leftAction")
+        try validateAction(rightAction, context: "Profile '\(profileName)' \(configName) rightAction")
     }
 }
 
@@ -591,7 +635,9 @@ final class ControllerBridge: NSObject {
     private var buttonStates: [String: Bool] = [:]
     private var lastTriggeredAt: [String: Date] = [:]
     private var lastAnalogScrollAt: [String: Date] = [:]
+    private var lastAnalogActionAt: [String: Date] = [:]
     private var polledButtonStates: [String: Bool] = [:]
+    private var analogDirectionStates: [String: Int] = [:]
     private var activeGamepads: [String: GCExtendedGamepad] = [:]
     private var activeControllers: [String: GCController] = [:]
     private var pollingTimer: Timer?
@@ -684,7 +730,9 @@ final class ControllerBridge: NSObject {
         activeControllers.removeValue(forKey: controllerID)
         buttonStates = buttonStates.filter { !$0.key.hasPrefix("\(controllerID)::") }
         lastAnalogScrollAt = lastAnalogScrollAt.filter { !$0.key.hasPrefix("\(controllerID)::") }
+        lastAnalogActionAt = lastAnalogActionAt.filter { !$0.key.hasPrefix("\(controllerID)::") }
         polledButtonStates = polledButtonStates.filter { !$0.key.hasPrefix("\(controllerID)::") }
+        analogDirectionStates = analogDirectionStates.filter { !$0.key.hasPrefix("\(controllerID)::") }
         activeHolds = activeHolds.filter { !$0.key.hasPrefix("\(controllerID)::") }
         print("Controller disconnected: \(controllerID)")
     }
@@ -764,6 +812,9 @@ final class ControllerBridge: NSObject {
             } else {
                 print("[CONFIG] Reloaded mappings from disk.")
             }
+
+            lastAnalogActionAt.removeAll()
+            analogDirectionStates.removeAll()
         } catch {
             print("[CONFIG] Reload failed: \(error.localizedDescription)")
         }
@@ -818,6 +869,7 @@ final class ControllerBridge: NSObject {
             pollButton(controllerID: controllerID, buttonName: "dpadRight", pressed: gamepad.dpad.right.isPressed)
             pollConfiguredVerticalScroll(controllerID: controllerID, gamepad: gamepad)
             pollConfiguredPointerMove(controllerID: controllerID, gamepad: gamepad)
+            pollConfiguredHorizontalActions(controllerID: controllerID, gamepad: gamepad)
         }
     }
 
@@ -995,6 +1047,86 @@ final class ControllerBridge: NSObject {
             lastAnalogScrollAt[throttleKey] = now
         } catch {
             print("[ERROR] analog pointer failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func pollConfiguredHorizontalActions(controllerID: String, gamepad: GCExtendedGamepad) {
+        let stateKey = "\(controllerID)::rightStickHorizontalActions"
+        let rawX = Double(gamepad.rightThumbstick.xAxis.value)
+
+        guard bridgeEnabled else {
+            analogDirectionStates[stateKey] = 0
+            return
+        }
+
+        guard let activeProfileName = profileResolver.resolveActiveProfile(),
+              let profile = config.profiles[activeProfileName],
+              profile.enabled ?? true,
+              let horizontalActions = profile.analog?.rightStickHorizontalActions,
+              horizontalActions.enabled ?? true else {
+            analogDirectionStates[stateKey] = 0
+            return
+        }
+
+        processHorizontalActions(
+            controllerID: controllerID,
+            profileName: activeProfileName,
+            rawX: rawX,
+            config: horizontalActions
+        )
+    }
+
+    private func processHorizontalActions(
+        controllerID: String,
+        profileName: String,
+        rawX: Double,
+        config: StickHorizontalActionConfig
+    ) {
+        let stateKey = "\(controllerID)::rightStickHorizontalActions"
+        let throttleKey = "\(controllerID)::\(profileName)::rightStickHorizontalActions"
+        let deadzone = min(max(config.deadzone ?? 0.58, 0.0), 0.99)
+        let direction: Int
+
+        if rawX <= -deadzone {
+            direction = -1
+        } else if rawX >= deadzone {
+            direction = 1
+        } else {
+            direction = 0
+        }
+
+        let previousDirection = analogDirectionStates[stateKey] ?? 0
+        guard direction != 0 else {
+            analogDirectionStates[stateKey] = 0
+            return
+        }
+
+        let isFreshTilt = direction != previousDirection
+        if !isFreshTilt && config.edgeTrigger != false {
+            return
+        }
+
+        let now = Date()
+        let repeatIntervalMs = max(1, config.repeatIntervalMs ?? 260)
+        if !isFreshTilt, let lastTriggeredAt = lastAnalogActionAt[throttleKey] {
+            let deltaMs = Int(now.timeIntervalSince(lastTriggeredAt) * 1000)
+            if deltaMs < repeatIntervalMs {
+                return
+            }
+        }
+
+        let action = direction < 0 ? config.leftAction : config.rightAction
+        let syntheticButton = direction < 0 ? "rightStickLeft" : "rightStickRight"
+        guard let action else {
+            return
+        }
+
+        analogDirectionStates[stateKey] = direction
+        do {
+            try actionExecutor.execute(action: action, profile: profileName, button: syntheticButton)
+            lastAnalogActionAt[throttleKey] = now
+        } catch {
+            print("[ERROR] analog horizontal action failed: \(error.localizedDescription)")
         }
     }
 

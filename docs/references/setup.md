@@ -49,20 +49,26 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
   - `R2` (`rightTrigger`): hold `F12` (`holdKeystroke`)
   - `L2` (`leftTrigger`): currently unassigned
   - Left stick `Y`: vertical scroll (analog; deadzone/rate-limited)
-  - Right stick `X/Y`: move mouse pointer (analog; deadzone/rate-limited)
+  - Right stick `Left/Right`: move one macOS workspace left/right (`Control` + arrow; one hop per tilt)
+  - Right stick `Up/Down`: currently unassigned
   - `Options`: close focused split surface (`Cmd+W`)
   - `Menu`: open `/model`
   - `X`: toggle split zoom (maximize/restore focused split)
+  - `Y`: send `Cmd+Shift+G`
   - `L1` (`leftShoulder`): cycle split focus in current tab
   - `R1` (`rightShoulder`): cycle tabs (next tab)
   - D-pad `Up/Down`: model picker up/down
-  - D-pad `Left`: currently unassigned (reserved for future)
-  - D-pad `Right`: send `Cmd+Shift+G`
+  - D-pad `Left`: send slash (`/`)
+  - D-pad `Right`: send dollar sign (`$`)
 
 Dictation stability note:
 - Auto-submit-on-release behavior is intentionally not configured for triggers.
 - Reason: dictation completion timing is asynchronous, so automatic `Enter` can submit partial/previous text.
 - Recommended pattern: keep trigger and submit separate (for example, trigger on `R2`, submit with a dedicated button).
+
+Workspace switching note:
+- The right-stick desktop hop uses the keyboard equivalent of the macOS gesture: `Control` + left/right arrow.
+- If Mission Control shortcuts for “Move left a space” / “Move right a space” are disabled or customized, update either the macOS shortcut or `config/mappings.json`.
 
 Non-profiled apps:
 - If frontmost app is not mapped in `appProfiles`, bridge logs `[SKIP] no active app profile` and executes nothing.
@@ -110,6 +116,9 @@ cd ~/GitHub/scripts
   - Cause: signing identity changed, or app executable was unnecessarily rebuilt/re-signed.
   - Fix: reinstall with stable signing:
     - `cd ~/GitHub/scripts && ./setup/stadia/install-launchd-stadia-controller-bridge.sh --mode live`
+- Symptom: right stick tilts but Spaces do not change.
+  - Cause: Mission Control’s keyboard shortcuts for moving left/right a space are disabled or remapped away from `Control` + arrow.
+  - Fix: enable/check them in `System Settings` > `Keyboard` > `Keyboard Shortcuts` > `Mission Control`, or update `config/mappings.json` to match your custom shortcut.
 - Fast status checks:
   - `launchctl print gui/$(id -u)/com.stadia-controller-bridge | sed -n '1,90p'`
   - `tail -n 120 ~/Library/Logs/stadia-controller-bridge.launchd.out.log`

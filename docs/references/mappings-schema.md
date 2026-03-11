@@ -20,6 +20,7 @@ Behavior note:
 - `leftStickVerticalScroll` (`StickVerticalScrollConfig`, optional): map left stick `Y` axis to vertical scrolling.
 - `rightStickVerticalScroll` (`StickVerticalScrollConfig`, optional): map right stick `Y` axis to vertical scrolling.
 - `rightStickPointer` (`StickPointerConfig`, optional): map right stick `X/Y` axes to mouse pointer movement.
+- `rightStickHorizontalActions` (`StickHorizontalActionConfig`, optional): map right stick `X` tilt into left/right discrete actions.
 
 ## StickVerticalScrollConfig
 - `enabled` (`bool`, optional, default `true`)
@@ -39,6 +40,14 @@ Behavior note:
 - `responseExponent` (`double`, optional, default `1.6`): acceleration curve (`> 1` gives finer center control).
 - `invertX` (`bool`, optional, default `false`): invert horizontal direction.
 - `invertY` (`bool`, optional, default `false`): invert vertical direction.
+
+## StickHorizontalActionConfig
+- `enabled` (`bool`, optional, default `true`)
+- `deadzone` (`double`, optional, default `0.58`): ignore small horizontal stick drift (`>= 0`, `< 1`).
+- `repeatIntervalMs` (`int`, optional, default `260`): minimum interval between repeated triggers while the stick stays held past the deadzone.
+- `edgeTrigger` (`bool`, optional, default `true`): when true, fire once per fresh tilt and require returning to center before triggering again.
+- `leftAction` (`ActionConfig`, required): action to execute when the right stick tilts left past the deadzone.
+- `rightAction` (`ActionConfig`, required): action to execute when the right stick tilts right past the deadzone.
 
 ## MappingConfig
 - `debounceMs` (`int`, optional): minimum interval between triggers.

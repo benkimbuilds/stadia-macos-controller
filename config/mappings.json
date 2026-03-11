@@ -15,15 +15,26 @@
           "responseExponent": 2.6,
           "invert": false
         },
-        "rightStickPointer": {
+        "rightStickHorizontalActions": {
           "enabled": true,
-          "deadzone": 0.24,
-          "intervalMs": 20,
-          "minPixelsPerTick": 1,
-          "maxPixelsPerTick": 14,
-          "responseExponent": 2.2,
-          "invertX": false,
-          "invertY": false
+          "deadzone": 0.62,
+          "edgeTrigger": true,
+          "leftAction": {
+            "type": "keystroke",
+            "keyCode": 123,
+            "modifiers": [
+              "control"
+            ],
+            "description": "Move one macOS workspace left (Control+Left Arrow)"
+          },
+          "rightAction": {
+            "type": "keystroke",
+            "keyCode": 124,
+            "modifiers": [
+              "control"
+            ],
+            "description": "Move one macOS workspace right (Control+Right Arrow)"
+          }
         }
       },
       "mappings": {
