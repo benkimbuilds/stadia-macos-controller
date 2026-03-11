@@ -46,6 +46,14 @@
             "description": "Hold to mimic F12"
           }
         },
+        "leftTrigger": {
+          "action": {
+            "type": "holdKeystroke",
+            "keyCode": 55,
+            "modifiers": [],
+            "description": "Hold Command modifier"
+          }
+        },
         "options": {
           "debounceMs": 220,
           "edgeTrigger": true,
@@ -131,12 +139,9 @@
           "edgeTrigger": true,
           "action": {
             "type": "keystroke",
-            "keyCode": 36,
-            "modifiers": [
-              "command",
-              "shift"
-            ],
-            "description": "Toggle split zoom (Ghostty toggle_split_zoom via Cmd+Shift+Enter)"
+            "keyCode": 48,
+            "modifiers": [],
+            "description": "Send Tab (pairs with L2 hold Command for Cmd+Tab)"
           }
         },
         "y": {

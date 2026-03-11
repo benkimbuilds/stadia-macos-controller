@@ -47,12 +47,12 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
 - App profile: `com.mitchellh.ghostty` -> `ghostty`
 - Ghostty defaults:
   - `R2` (`rightTrigger`): hold `F12` (`holdKeystroke`)
-  - `L2` (`leftTrigger`): currently unassigned
+  - `L2` (`leftTrigger`): hold `Command`
   - Left stick `Y`: vertical scroll (analog; deadzone/rate-limited)
   - Right stick: currently unassigned
   - `Options`: close focused split surface (`Cmd+W`)
   - `Menu`: open `/model`
-  - `X`: toggle split zoom (maximize/restore focused split)
+  - `X`: send `Tab` (`L2` + `X` behaves like `Cmd+Tab` if the held modifier is recognized)
   - `Y`: send `Cmd+Shift+G`
   - `L1` (`leftShoulder`): cycle split focus in current tab
   - `R1` (`rightShoulder`): cycle tabs (next tab)

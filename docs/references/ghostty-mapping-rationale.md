@@ -7,7 +7,8 @@ Reduce cognitive load while using dictation + controller together by making butt
 - `L1` (`leftShoulder`): split-focus cycle only (within current tab, `goto_split:next` / `Cmd+]`).
 - `R1` (`rightShoulder`): tab cycle only.
 - `Options`: close focused split only (`close_surface` / `Cmd+W`), not whole tab.
-- `X`: toggle split zoom (temporary maximize/restore for focused split).
+- `L2` (`leftTrigger`): hold `Command` as a modifier chord.
+- `X`: send `Tab`, primarily as the `L2` companion for app switching (`Cmd+Tab`).
 - `D-pad Up/Down`: model picker up/down.
 - `D-pad Left`: send slash (`/`).
 - `D-pad Right`: send dollar sign (`$`).
@@ -16,7 +17,8 @@ Reduce cognitive load while using dictation + controller together by making butt
 ## Why This Layout
 - Shoulder buttons become role-based instead of direction-based:
   - one shoulder for tabs, one shoulder for splits.
-- `X` is a safe high-value action (reversible, no close/delete side effects).
+- `X` becomes a lightweight companion key instead of a destructive or layout-changing action.
+- `L2` + `X` is a low-risk modifier experiment because it uses a held modifier with a discrete button, not an analog stick.
 - Up/down movement uses the literal directional input (D-pad), improving legibility.
 - Left/right D-pad keep punctuation/navigation helpers on one cluster.
 - The right stick is currently reserved until there is a reliable, low-risk use for it on macOS.

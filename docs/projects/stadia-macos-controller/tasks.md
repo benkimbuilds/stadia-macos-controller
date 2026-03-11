@@ -98,6 +98,7 @@ Run in dry-run mode first to inspect resolved profile + action logs before enabl
 - 2026-02-28: [DONE] Added profile-level analog stick controls with deadzone/speed/rate controls; active Ghostty default now uses `leftStickVerticalScroll` for scrolling and `rightStickPointer` for cursor movement.
 - 2026-03-03: [DONE] Corrected `dpadLeft` mapping to send slash (`keyCode=44`) and updated Ghostty layout rationale.
 - 2026-03-11: [DONE] Added configurable horizontal analog actions for the right stick; attempted default workspace switching via `Control` + left/right arrow was disabled after live validation showed macOS ignored synthetic Space-switch key events on this machine.
+- 2026-03-11: [DONE] Remapped `L2` to held `Command` and `X` to `Tab` as a lower-risk `Cmd+Tab` experiment using a discrete button chord instead of the right stick.
 
 ## Next 3 Actions
 1. Capture Phase 2 backlog for Codex-specific profile behavior now that Ghostty flow is stable.
