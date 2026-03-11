@@ -61,7 +61,7 @@ Behavior note:
 - `action` (`ActionConfig`): action to execute.
 
 ## ActionConfig
-- `type` (`"keystroke" | "holdKeystroke" | "shell" | "applescript" | "text"`)
+- `type` (`"keystroke" | "holdKeystroke" | "shell" | "applescript" | "text" | "mouseClick"`)
 - Keystroke fields:
   - `keyCode` (`int`, required)
   - `modifiers` (`string[]`, optional)
@@ -80,6 +80,8 @@ Behavior note:
   - `preDelayMs` (`int`, optional): delay after pre-keystroke and before typing text.
   - `pressEnter` (`bool`, optional): if true, press Enter after typing text.
   - `delayMs` (`int`, optional): delay between typing text and Enter.
+- Mouse click fields:
+  - `mouseButton` (`"left" | "right" | "center"`, optional, default `"left"`)
 - Optional shared field:
   - `description` (`string`)
 

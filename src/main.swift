@@ -140,6 +140,7 @@ struct ActionConfig: Decodable {
     let command: String?
     let script: String?
     let text: String?
+    let mouseButton: String?
     let pressEnter: Bool?
     let delayMs: Int?
     let preKeyCode: Int?
@@ -154,6 +155,7 @@ enum ActionType: String, Decodable {
     case shell
     case applescript
     case text
+    case mouseClick
 }
 
 struct ControllerEvent {
@@ -297,6 +299,13 @@ struct ConfigLoader {
         case .text:
             guard let text = action.text, !text.isEmpty else {
                 throw BridgeError.configValidationFailed("\(context) text action requires text")
+            }
+        case .mouseClick:
+            if let mouseButton = action.mouseButton {
+                let normalized = mouseButton.lowercased()
+                guard ["left", "right", "center"].contains(normalized) else {
+                    throw BridgeError.configValidationFailed("\(context) mouseClick action mouseButton must be left, right, or center")
+                }
             }
         }
     }
@@ -478,6 +487,13 @@ final class ActionExecutor {
             }
 
             print("[ACTION] text profile=\(profile) button=\(button) text=\(text)")
+
+        case .mouseClick:
+            try clickMouse(
+                button: mouseButton(from: action.mouseButton),
+                profile: profile,
+                source: button
+            )
         }
     }
 
@@ -594,6 +610,56 @@ final class ActionExecutor {
         print("[ACTION] pointer profile=\(profile) source=\(source) dx=\(dx) dy=\(dy)")
     }
 
+    func clickMouse(button: CGMouseButton, profile: String, source: String) throws {
+        if dryRun {
+            print("[DRY-RUN] mouse-click profile=\(profile) source=\(source) button=\(button.rawValue)")
+            return
+        }
+
+        if !AXIsProcessTrusted() {
+            throw BridgeError.actionExecutionFailed("Accessibility permission is required for mouse click injection")
+        }
+
+        let location = NSEvent.mouseLocation
+        let mouseType: CGEventType
+        let mouseUpType: CGEventType
+
+        switch button {
+        case .left:
+            mouseType = .leftMouseDown
+            mouseUpType = .leftMouseUp
+        case .right:
+            mouseType = .rightMouseDown
+            mouseUpType = .rightMouseUp
+        case .center:
+            mouseType = .otherMouseDown
+            mouseUpType = .otherMouseUp
+        @unknown default:
+            mouseType = .leftMouseDown
+            mouseUpType = .leftMouseUp
+        }
+
+        guard let eventSource = CGEventSource(stateID: .hidSystemState),
+              let mouseDown = CGEvent(
+                mouseEventSource: eventSource,
+                mouseType: mouseType,
+                mouseCursorPosition: location,
+                mouseButton: button
+              ),
+              let mouseUp = CGEvent(
+                mouseEventSource: eventSource,
+                mouseType: mouseUpType,
+                mouseCursorPosition: location,
+                mouseButton: button
+              ) else {
+            throw BridgeError.actionExecutionFailed("Failed to create mouse click event")
+        }
+
+        mouseDown.post(tap: .cghidEventTap)
+        mouseUp.post(tap: .cghidEventTap)
+        print("[ACTION] mouse-click profile=\(profile) source=\(source) button=\(button.rawValue)")
+    }
+
     private func modifierFlags(from modifiers: [String]) -> CGEventFlags {
         modifiers.reduce(CGEventFlags()) { partial, modifier in
             switch modifier.lowercased() {
@@ -608,6 +674,17 @@ final class ActionExecutor {
             default:
                 return partial
             }
+        }
+    }
+
+    private func mouseButton(from value: String?) -> CGMouseButton {
+        switch value?.lowercased() {
+        case "right":
+            return .right
+        case "center":
+            return .center
+        default:
+            return .left
         }
     }
 

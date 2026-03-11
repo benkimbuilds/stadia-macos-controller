@@ -41,6 +41,15 @@
           "description": "Send Tab (L2 + X behaves like Cmd+Tab)"
         }
       },
+      "leftThumbstickButton": {
+        "debounceMs": 120,
+        "edgeTrigger": true,
+        "action": {
+          "type": "mouseClick",
+          "mouseButton": "left",
+          "description": "Left mouse click"
+        }
+      },
       "dpadUp": {
         "debounceMs": 140,
         "edgeTrigger": true,
@@ -143,19 +152,6 @@
               "command"
             ],
             "description": "Capture button: open new tab (Ghostty auto-runs codex)"
-          }
-        },
-        "leftThumbstickButton": {
-          "debounceMs": 180,
-          "edgeTrigger": true,
-          "action": {
-            "type": "keystroke",
-            "keyCode": 2,
-            "modifiers": [
-              "command",
-              "shift"
-            ],
-            "description": "Split down (Cmd+Shift+D)"
           }
         },
         "rightThumbstickButton": {
