@@ -107,6 +107,7 @@ Run in dry-run mode first to inspect resolved profile + action logs before enabl
 - 2026-03-11: [DONE] Reassigned Ghostty right-stick horizontal tilt from the failed macOS Spaces experiment to punctuation shortcuts: `Left` sends `/`, `Right` sends `$`.
 - 2026-03-12: [DONE] Switched Ghostty `share` from plain `Cmd+T` injection to Ghostty `1.3.0` AppleScript `new tab` with a custom surface configuration so new tabs launch `codex_jump` immediately, while split actions keep their inherited working directory behavior.
 - 2026-03-12: [DONE] Added a dedicated `ghosttyAction` action type and migrated the obvious Ghostty-first controls (`Options`, right thumbstick click, `L1`, `R1`) away from macOS keystroke injection to Ghostty native actions.
+- 2026-03-12: [DONE] Added discrete right-stick vertical actions and moved `/model` from the `menu` button to right-stick up so the Codex-specific prompt lives on the analog stick instead of a dedicated face/menu control.
 
 ## Next 3 Actions
 1. Capture Phase 2 backlog for Codex-specific profile behavior now that Ghostty flow is stable.

@@ -87,6 +87,18 @@
     "ghostty": {
       "enabled": true,
       "analog": {
+        "rightStickVerticalActions": {
+          "enabled": true,
+          "deadzone": 0.66,
+          "edgeTrigger": true,
+          "upAction": {
+            "type": "text",
+            "text": "/model",
+            "delayMs": 80,
+            "pressEnter": true,
+            "description": "Open /model popup from right stick up"
+          }
+        },
         "rightStickHorizontalActions": {
           "enabled": true,
           "deadzone": 0.62,
@@ -115,17 +127,6 @@
             "type": "ghosttyAction",
             "ghosttyAction": "close_surface",
             "description": "Close focused split surface via Ghostty native action"
-          }
-        },
-        "menu": {
-          "debounceMs": 220,
-          "edgeTrigger": true,
-          "action": {
-            "type": "text",
-            "text": "/model",
-            "delayMs": 80,
-            "pressEnter": true,
-            "description": "Open /model popup"
           }
         },
         "share": {

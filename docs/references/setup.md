@@ -53,9 +53,9 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
   - Left stick `Y`: vertical scroll (analog; deadzone/rate-limited)
   - D-pad `Up/Down/Left/Right`: send arrow keys
 - Ghostty defaults:
+  - Right stick up: open `/model` popup
   - Right stick horizontal tilt: `Left` sends `/`, `Right` sends `$`
   - `Options`: close focused split surface via Ghostty native action
-  - `Menu`: open `/model`
   - `Share`: open a new tab and immediately launch the Codex repo picker (`Ghostty` AppleScript; requires Ghostty `1.3.0+`)
   - `Y`: open the Codex jump picker in the current terminal (`Cmd+Shift+G`)
   - Right thumbstick click: split right via Ghostty native action and inherit the current directory

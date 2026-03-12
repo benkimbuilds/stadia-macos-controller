@@ -89,6 +89,7 @@ struct AnalogConfig: Decodable {
     let leftStickVerticalScroll: StickVerticalScrollConfig?
     let rightStickVerticalScroll: StickVerticalScrollConfig?
     let rightStickPointer: StickPointerConfig?
+    let rightStickVerticalActions: StickVerticalActionConfig?
     let rightStickHorizontalActions: StickHorizontalActionConfig?
 }
 
@@ -120,6 +121,15 @@ struct StickHorizontalActionConfig: Decodable {
     let edgeTrigger: Bool?
     let leftAction: ActionConfig?
     let rightAction: ActionConfig?
+}
+
+struct StickVerticalActionConfig: Decodable {
+    let enabled: Bool?
+    let deadzone: Double?
+    let repeatIntervalMs: Int?
+    let edgeTrigger: Bool?
+    let upAction: ActionConfig?
+    let downAction: ActionConfig?
 }
 
 struct MappingConfig: Decodable {
@@ -242,6 +252,13 @@ struct ConfigLoader {
                 if let pointer = analogConfig.rightStickPointer {
                     try validateStickPointerConfig(pointer, profileName: profileName, configName: "rightStickPointer")
                 }
+                if let verticalActions = analogConfig.rightStickVerticalActions {
+                    try validateStickVerticalActionConfig(
+                        verticalActions,
+                        profileName: profileName,
+                        configName: "rightStickVerticalActions"
+                    )
+                }
                 if let horizontalActions = analogConfig.rightStickHorizontalActions {
                     try validateStickHorizontalActionConfig(
                         horizontalActions,
@@ -268,6 +285,13 @@ struct ConfigLoader {
                 }
                 if let pointer = analogConfig.rightStickPointer {
                     try validateStickPointerConfig(pointer, profileName: "alwaysOn", configName: "rightStickPointer")
+                }
+                if let verticalActions = analogConfig.rightStickVerticalActions {
+                    try validateStickVerticalActionConfig(
+                        verticalActions,
+                        profileName: "alwaysOn",
+                        configName: "rightStickVerticalActions"
+                    )
                 }
                 if let horizontalActions = analogConfig.rightStickHorizontalActions {
                     try validateStickHorizontalActionConfig(
@@ -391,6 +415,28 @@ struct ConfigLoader {
 
         try validateAction(leftAction, context: "Profile '\(profileName)' \(configName) leftAction")
         try validateAction(rightAction, context: "Profile '\(profileName)' \(configName) rightAction")
+    }
+
+    private static func validateStickVerticalActionConfig(
+        _ config: StickVerticalActionConfig,
+        profileName: String,
+        configName: String
+    ) throws {
+        if let deadzone = config.deadzone, deadzone < 0 || deadzone >= 1 {
+            throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) deadzone must be >= 0 and < 1")
+        }
+        if let repeatIntervalMs = config.repeatIntervalMs, repeatIntervalMs < 1 {
+            throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) repeatIntervalMs must be >= 1")
+        }
+        guard config.upAction != nil || config.downAction != nil else {
+            throw BridgeError.configValidationFailed("Profile '\(profileName)' \(configName) requires upAction or downAction")
+        }
+        if let upAction = config.upAction {
+            try validateAction(upAction, context: "Profile '\(profileName)' \(configName) upAction")
+        }
+        if let downAction = config.downAction {
+            try validateAction(downAction, context: "Profile '\(profileName)' \(configName) downAction")
+        }
     }
 }
 
@@ -1031,6 +1077,7 @@ final class ControllerBridge: NSObject {
             pollButton(controllerID: controllerID, buttonName: "dpadRight", pressed: gamepad.dpad.right.isPressed)
             pollConfiguredVerticalScroll(controllerID: controllerID, gamepad: gamepad)
             pollConfiguredPointerMove(controllerID: controllerID, gamepad: gamepad)
+            pollConfiguredVerticalActions(controllerID: controllerID, gamepad: gamepad)
             pollConfiguredHorizontalActions(controllerID: controllerID, gamepad: gamepad)
         }
     }
@@ -1285,6 +1332,44 @@ final class ControllerBridge: NSObject {
         )
     }
 
+    private func pollConfiguredVerticalActions(controllerID: String, gamepad: GCExtendedGamepad) {
+        let stateKey = "\(controllerID)::rightStickVerticalActions"
+        let rawY = Double(gamepad.rightThumbstick.yAxis.value)
+
+        guard bridgeEnabled else {
+            analogDirectionStates[stateKey] = 0
+            return
+        }
+
+        let activeProfileName = profileResolver.resolveActiveProfile()
+        let activeProfile = activeProfileName.flatMap { config.profiles[$0] }
+        let verticalSource: (profileName: String, config: StickVerticalActionConfig)?
+        if let globalVertical = config.alwaysOn?.analog?.rightStickVerticalActions,
+           globalVertical.enabled ?? true {
+            verticalSource = ("alwaysOn", globalVertical)
+        } else if let activeProfileName,
+                  let profile = activeProfile,
+                  profile.enabled ?? true,
+                  let profileVertical = profile.analog?.rightStickVerticalActions,
+                  profileVertical.enabled ?? true {
+            verticalSource = (activeProfileName, profileVertical)
+        } else {
+            verticalSource = nil
+        }
+
+        guard let verticalSource else {
+            analogDirectionStates[stateKey] = 0
+            return
+        }
+
+        processVerticalActions(
+            controllerID: controllerID,
+            profileName: verticalSource.profileName,
+            rawY: rawY,
+            config: verticalSource.config
+        )
+    }
+
     private func processHorizontalActions(
         controllerID: String,
         profileName: String,
@@ -1336,6 +1421,60 @@ final class ControllerBridge: NSObject {
             lastAnalogActionAt[throttleKey] = now
         } catch {
             print("[ERROR] analog horizontal action failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func processVerticalActions(
+        controllerID: String,
+        profileName: String,
+        rawY: Double,
+        config: StickVerticalActionConfig
+    ) {
+        let stateKey = "\(controllerID)::rightStickVerticalActions"
+        let throttleKey = "\(controllerID)::\(profileName)::rightStickVerticalActions"
+        let deadzone = min(max(config.deadzone ?? 0.58, 0.0), 0.99)
+        let direction: Int
+
+        if rawY <= -deadzone {
+            direction = -1
+        } else if rawY >= deadzone {
+            direction = 1
+        } else {
+            direction = 0
+        }
+
+        let previousDirection = analogDirectionStates[stateKey] ?? 0
+        guard direction != 0 else {
+            analogDirectionStates[stateKey] = 0
+            return
+        }
+
+        let isFreshTilt = direction != previousDirection
+        if !isFreshTilt && config.edgeTrigger != false {
+            return
+        }
+
+        let now = Date()
+        let repeatIntervalMs = max(1, config.repeatIntervalMs ?? 260)
+        if !isFreshTilt, let lastTriggeredAt = lastAnalogActionAt[throttleKey] {
+            let deltaMs = Int(now.timeIntervalSince(lastTriggeredAt) * 1000)
+            if deltaMs < repeatIntervalMs {
+                return
+            }
+        }
+
+        let action = direction < 0 ? config.downAction : config.upAction
+        let syntheticButton = direction < 0 ? "rightStickDown" : "rightStickUp"
+        guard let action else {
+            return
+        }
+
+        analogDirectionStates[stateKey] = direction
+        do {
+            try actionExecutor.execute(action: action, profile: profileName, button: syntheticButton)
+            lastAnalogActionAt[throttleKey] = now
+        } catch {
+            print("[ERROR] analog vertical action failed: \(error.localizedDescription)")
         }
     }
 

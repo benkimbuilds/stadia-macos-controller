@@ -11,6 +11,7 @@ Reduce cognitive load while using dictation + controller together by making butt
 - `X`: send `Tab`, primarily as the `L2` companion for app switching (`Cmd+Tab`).
 - Left thumbstick click: intentionally unassigned for now because click-plus-scroll on the same stick felt noisy in practice.
 - D-pad `Up/Down/Left/Right`: global arrow-key navigation via `alwaysOn`.
+- Right stick up: open `/model`.
 - Right stick horizontal tilt: Ghostty-only punctuation shortcuts (`Left` = `/`, `Right` = `$`).
 - `Share`: Ghostty AppleScript `new tab` with a custom surface configuration so the new tab opens directly into the Codex jump picker.
 - `Y`: manual Codex jump picker for the current terminal (`Cmd+Shift+G`).
@@ -23,7 +24,9 @@ Reduce cognitive load while using dictation + controller together by making butt
 - `L2` + `X` is a low-risk modifier experiment because it uses a held modifier with a discrete button, not an analog stick.
 - Left thumbstick click is intentionally left unused until there is a cleaner role for it.
 - The D-pad is reserved for consistent global navigation across apps.
-- The right stick is a better place for Ghostty-only punctuation than the D-pad because it avoids interfering with global navigation.
+- The right stick now carries the quick Codex-specific prompts without consuming face buttons:
+  - up is `/model`
+  - horizontal tilt is punctuation
 - New tabs and splits now intentionally diverge:
   - new tab means "start somewhere else" and should open the repo chooser immediately.
   - split means "stay in this workspace" and should inherit the current directory.
