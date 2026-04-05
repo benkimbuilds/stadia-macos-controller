@@ -1,34 +1,44 @@
 # Bridge Overview
 
-This repo is a small local input bridge. The Stadia controller is the input device, the Swift bridge is the decision layer, and Ghostty is currently the main output target. The bridge does not try to be a full automation platform. It picks the active app profile, looks up the mapped action, and executes the smallest thing needed.
+This repo is a small local input bridge. The Stadia controller is the input device, `ControllerBridge` owns runtime orchestration, `ProfileResolver` chooses the active app profile, and `ActionExecutor` dispatches the mapped action to Ghostty or macOS. The bridge does not try to be a full automation platform. It loads config, watches for changes, resolves the frontmost app, and executes the smallest thing needed.
 
 ```mermaid
 flowchart TD
     Controller[Stadia Controller]
     GameController[macOS GameController]
-    Bridge[Swift Bridge Runtime]
+    ConfigLoader[ConfigLoader]
     Config[config/mappings.json]
-    Resolver[Frontmost App Resolver]
-    Profile[Active Profile]
-    Action[Action Executor]
+    Bridge[ControllerBridge]
+    Resolver[ProfileResolver]
+    FrontmostApp[Frontmost App Bundle ID]
+    Profile[Active Profile and alwaysOn]
+    Action[ActionExecutor]
     Ghostty[Ghostty]
     MacOS[macOS Input APIs]
+    Helpers[Shell or AppleScript Helpers]
 
     Controller --> GameController
     GameController --> Bridge
-    Config --> Bridge
+    Config --> ConfigLoader
+    ConfigLoader --> Bridge
     Bridge --> Resolver
-    Resolver --> Profile
+    Resolver --> FrontmostApp
+    FrontmostApp --> Profile
+    Bridge --> Profile
     Profile --> Action
     Action --> Ghostty
     Action --> MacOS
+    Action --> Helpers
 ```
 
 ## Main Parts
 
 - `GameController` gives the raw controller buttons and stick values.
-- The Swift bridge polls inputs, applies debounce and edge-trigger rules, and chooses the active profile.
-- `config/mappings.json` is the source of truth for button mappings and analog behavior.
+- `ConfigLoader` validates `config/mappings.json` on startup and on hot reload before the runtime adopts new settings.
+- `ControllerBridge` polls inputs, tracks debounce and hold state, watches the config file, and coordinates profile resolution plus action dispatch.
+- `ProfileResolver` maps the frontmost macOS bundle ID to one configured profile name.
+- `config/mappings.json` is the source of truth for app profiles, `alwaysOn` controls, button mappings, analog behavior, and safety defaults.
+- `ActionExecutor` dispatches the chosen action through macOS input APIs, shell helpers, or Ghostty's AppleScript surface.
 - Ghostty-specific actions can go through three paths:
   - plain keystrokes
   - Ghostty native action dispatch
@@ -36,11 +46,11 @@ flowchart TD
 
 ## Main Flow
 
-1. Load `config/mappings.json`.
-2. Detect the connected controller and poll button/stick state.
-3. Resolve the frontmost app bundle ID.
-4. Pick the matching profile, plus any explicit `alwaysOn` controls.
-5. Execute the mapped action.
+1. Parse CLI options and load `config/mappings.json`.
+2. Start controller discovery, polling, and config-file watching.
+3. Detect button or stick changes and normalize them into runtime events.
+4. Resolve the frontmost app bundle ID and choose the matching profile, plus any explicit `alwaysOn` controls.
+5. Execute the mapped action through `ActionExecutor`.
 
 ## Action Types
 
@@ -55,7 +65,7 @@ flowchart TD
 
 ## Boundaries
 
-- The bridge owns controller mapping, profile resolution, and action dispatch.
+- The bridge repo owns controller mapping, profile resolution, action dispatch, and config validation.
 - Ghostty owns terminal/tab/split semantics.
 - Machine-level install and launchd wiring live in `~/GitHub/scripts/setup/stadia/`.
 - Codex shell behavior and the directory picker live in `~/.agents/codex/`.

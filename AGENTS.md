@@ -1,26 +1,27 @@
-# Stadia macOS Controller Repo Guidance
+# Stadia macOS Controller
+
+This is the only `AGENTS.md` in this repo. Do not expect nested `AGENTS.md` files or any `CLAUDE.md` files to exist or auto-load when working in subdirectories.
 
 ## Goal
-Build a local bridge that maps Stadia controller inputs to macOS actions and app-specific shortcuts (starting with Ghostty).
+- Build a local bridge that maps Stadia controller inputs to macOS actions and app-specific shortcuts, starting with Ghostty.
 
-## Workflow
+## Working Defaults
 - Keep implementation pragmatic and testable on macOS.
-- Prefer native Apple frameworks first when feasible.
-- Keep mappings configurable (do not hardcode behavior in multiple places).
-- Keep machine-level install/reconcile entrypoints in `~/GitHub/scripts/setup/` (project repo keeps bridge code/config as source of truth).
-- Use explicit app profile mapping only; do not add global fallback profile behavior unless explicitly requested.
-- Run `scripts/check-fast.sh` before handoff to catch conflict markers and package parse issues.
+- Prefer native Apple frameworks before adding extra dependencies.
+- Keep controller behavior configurable from `config/mappings.json`.
+- Keep app behavior explicit: preserve the `appProfiles` plus `alwaysOn` model instead of adding implicit fallback profiles unless explicitly requested.
 
-## Documentation
-- Use `docs/AGENTS.md` as the docs routing entrypoint.
-- Keep architecture notes in `docs/architecture/`.
-- Keep stable lookup/config details in `docs/references/`.
-- Track active work in `docs/projects/stadia-macos-controller/tasks.md`.
+## Docs Contract
+- Update `docs/architecture/` when subsystem shape, boundaries, responsibilities, or runtime flow change.
+- Update `docs/references/` when commands, file maps, config contracts, validation steps, or operational notes change.
+- Read these docs first:
+  - `docs/architecture/bridge-overview.md`
+  - `docs/architecture/ghostty-integration.md`
+  - `docs/references/repo-contract.md`
+  - `docs/references/setup.md`
+  - `docs/references/mappings-schema.md`
+  - `docs/references/deployment.md`
 
-## Correctness Guardrails
-- Do not claim bridge changes are correct without validation evidence (`launchctl print gui/$(id -u)/com.stadia-controller-bridge` plus a live button press check).
-- Prefer running `~/GitHub/scripts/setup/stadia/verify-launchd-stadia-controller-bridge.sh` after install/reinstall before declaring launchd wiring healthy.
-- Use canonical machine-level launchd entrypoints from `~/GitHub/scripts/setup/` to avoid setup drift across machines.
-- Keep launchd service identity consistent (`com.stadia-controller-bridge`) across machines; do not introduce per-machine labels unless explicitly requested.
-- Keep staged runtime target consistent: `~/Library/Application Support/stadia-controller-bridge/StadiaControllerBridge.app`.
-- Treat `config/mappings.json` hot reload as config-only. If a change adds a new runtime action type or config schema, reinstall the staged launchd app so launchd stops running the old binary.
+## Validation
+- Run repo-native validation and any change-specific Swift or runtime checks before handoff.
+- Use `docs/references/repo-contract.md` for the exact validation and launchd evidence expected before declaring the bridge healthy.
