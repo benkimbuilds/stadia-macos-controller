@@ -158,6 +158,17 @@
         }
       },
       "mappings": {
+        "menu": {
+          "debounceMs": 250,
+          "edgeTrigger": true,
+          "action": {
+            "type": "text",
+            "text": "co",
+            "delayMs": 80,
+            "pressEnter": true,
+            "description": "Launch Codex via the Ghostty co alias"
+          }
+        },
         "options": {
           "debounceMs": 220,
           "edgeTrigger": true,

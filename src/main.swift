@@ -738,6 +738,29 @@ final class ActionExecutor {
         print("[ACTION] mouse-click profile=\(profile) source=\(source) button=\(button.rawValue)")
     }
 
+    func focusFrontmostWindow(profile: String, source: String) throws {
+        if dryRun {
+            print("[DRY-RUN] focus-frontmost-window profile=\(profile) source=\(source)")
+            return
+        }
+
+        if !AXIsProcessTrusted() {
+            throw BridgeError.actionExecutionFailed("Accessibility permission is required for frontmost-window focus")
+        }
+
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            throw BridgeError.actionExecutionFailed("No frontmost application found for focus")
+        }
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        let windowElement = try focusedOrMainWindow(for: appElement)
+        let frame = try frame(for: windowElement)
+        let target = CGPoint(x: frame.midX, y: frame.midY)
+
+        try clickMouse(at: target, button: .left, profile: profile, source: source)
+        print("[ACTION] focus-frontmost-window profile=\(profile) source=\(source) point=(\(Int(target.x)),\(Int(target.y)))")
+    }
+
     private func modifierFlags(from modifiers: [String]) -> CGEventFlags {
         modifiers.reduce(CGEventFlags()) { partial, modifier in
             switch modifier.lowercased() {
@@ -818,6 +841,110 @@ final class ActionExecutor {
             keyDown.post(tap: .cghidEventTap)
             keyUp.post(tap: .cghidEventTap)
         }
+    }
+
+    private func focusedOrMainWindow(for appElement: AXUIElement) throws -> AXUIElement {
+        if let focused = copyAXElement(appElement, attribute: kAXFocusedWindowAttribute as CFString) {
+            return focused
+        }
+        if let main = copyAXElement(appElement, attribute: kAXMainWindowAttribute as CFString) {
+            return main
+        }
+        throw BridgeError.actionExecutionFailed("Frontmost app has no accessible focused or main window")
+    }
+
+    private func frame(for windowElement: AXUIElement) throws -> CGRect {
+        guard let position = copyAXPoint(windowElement, attribute: kAXPositionAttribute as CFString),
+              let size = copyAXSize(windowElement, attribute: kAXSizeAttribute as CFString) else {
+            throw BridgeError.actionExecutionFailed("Failed to read frontmost window frame")
+        }
+
+        return CGRect(origin: position, size: size)
+    }
+
+    private func copyAXElement(_ element: AXUIElement, attribute: CFString) -> AXUIElement? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success, let value, CFGetTypeID(value) == AXUIElementGetTypeID() else {
+            return nil
+        }
+        return (value as! AXUIElement)
+    }
+
+    private func copyAXPoint(_ element: AXUIElement, attribute: CFString) -> CGPoint? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success,
+              let value,
+              CFGetTypeID(value) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let axValue = value as! AXValue
+        var point = CGPoint.zero
+        guard AXValueGetValue(axValue, .cgPoint, &point) else {
+            return nil
+        }
+        return point
+    }
+
+    private func copyAXSize(_ element: AXUIElement, attribute: CFString) -> CGSize? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success,
+              let value,
+              CFGetTypeID(value) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let axValue = value as! AXValue
+        var size = CGSize.zero
+        guard AXValueGetValue(axValue, .cgSize, &size) else {
+            return nil
+        }
+        return size
+    }
+
+    private func clickMouse(at location: CGPoint, button: CGMouseButton, profile: String, source: String) throws {
+        guard let eventSource = CGEventSource(stateID: .hidSystemState) else {
+            throw BridgeError.actionExecutionFailed("Failed to create mouse event source")
+        }
+
+        let mouseType: CGEventType
+        let mouseUpType: CGEventType
+
+        switch button {
+        case .left:
+            mouseType = .leftMouseDown
+            mouseUpType = .leftMouseUp
+        case .right:
+            mouseType = .rightMouseDown
+            mouseUpType = .rightMouseUp
+        case .center:
+            mouseType = .otherMouseDown
+            mouseUpType = .otherMouseUp
+        @unknown default:
+            mouseType = .leftMouseDown
+            mouseUpType = .leftMouseUp
+        }
+
+        guard let mouseDown = CGEvent(
+                mouseEventSource: eventSource,
+                mouseType: mouseType,
+                mouseCursorPosition: location,
+                mouseButton: button
+              ),
+              let mouseUp = CGEvent(
+                mouseEventSource: eventSource,
+                mouseType: mouseUpType,
+                mouseCursorPosition: location,
+                mouseButton: button
+              ) else {
+            throw BridgeError.actionExecutionFailed("Failed to create mouse click event")
+        }
+
+        mouseDown.post(tap: .cghidEventTap)
+        mouseUp.post(tap: .cghidEventTap)
     }
 
     private func executeGhosttyAction(_ action: String) throws {
@@ -1712,6 +1839,7 @@ final class ControllerBridge: NSObject {
 
         do {
             try actionExecutor.execute(action: resolved.mapping.action, profile: resolved.profileName, button: event.button)
+            tryFocusAfterScreenChange(button: event.button, profileName: resolved.profileName)
             lastTriggeredAt[debounceKey] = now
         } catch {
             print("[ERROR] action failed: \(error.localizedDescription)")
@@ -1731,6 +1859,19 @@ final class ControllerBridge: NSObject {
         }
 
         return nil
+    }
+
+    private func tryFocusAfterScreenChange(button: String, profileName: String) {
+        guard ["leftShoulder", "rightShoulder"].contains(button) else {
+            return
+        }
+
+        do {
+            Thread.sleep(forTimeInterval: 0.30)
+            try actionExecutor.focusFrontmostWindow(profile: profileName, source: button)
+        } catch {
+            print("[WARN] frontmost-window focus failed after \(button): \(error.localizedDescription)")
+        }
     }
 
     private static func controllerID(for controller: GCController) -> String {
