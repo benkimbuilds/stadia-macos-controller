@@ -72,18 +72,17 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
   - `R2` (`rightTrigger`): hold `F12` (`holdKeystroke`)
   - `L2` (`leftTrigger`): hold `Command`
   - `X`: send `Tab` (`L2` + `X` behaves like `Cmd+Tab`)
+  - `L1` (`leftShoulder`): move to the previous macOS space/display
+  - `R1` (`rightShoulder`): move to the next macOS space/display
   - Left stick `Y`: vertical scroll (analog; deadzone/rate-limited)
     - when Ghostty is frontmost, scroll is sent to Ghostty's focused terminal directly so it follows tab/split focus instead of mouse cursor position
   - D-pad `Up/Down/Left/Right`: send arrow keys
 - Ghostty defaults:
-  - Right stick up: open `/model` popup
-  - Right stick horizontal tilt: `Left` sends `/`, `Right` sends `$`
+  - Right stick tilts resize the focused split in all four directions
   - `Options`: close focused split surface via Ghostty native action
   - `Share`: open a new tab and immediately launch the Codex repo picker through the shared helper script (`Ghostty` AppleScript; requires Ghostty `1.3.0+`)
-  - Left thumbstick click: open a right split and immediately launch the Codex repo picker through the shared helper script
+  - Left thumbstick click: split down via Ghostty native action
   - Right thumbstick click: split right via Ghostty native action and inherit the current directory
-  - `L1` (`leftShoulder`): cycle split focus in current tab via Ghostty native action
-  - `R1` (`rightShoulder`): cycle tabs (next tab) via Ghostty native action
 
 Dictation stability note:
 - Auto-submit-on-release behavior is intentionally not configured for triggers.

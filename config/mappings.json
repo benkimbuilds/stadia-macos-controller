@@ -99,6 +99,24 @@
           "modifiers": [],
           "description": "Send Right Arrow"
         }
+      },
+      "leftShoulder": {
+        "debounceMs": 180,
+        "edgeTrigger": true,
+        "action": {
+          "type": "applescript",
+          "script": "tell application \"System Events\" to key code 123 using {control down}",
+          "description": "Move to the previous macOS space/display via System Events"
+        }
+      },
+      "rightShoulder": {
+        "debounceMs": 180,
+        "edgeTrigger": true,
+        "action": {
+          "type": "applescript",
+          "script": "tell application \"System Events\" to key code 124 using {control down}",
+          "description": "Move to the next macOS space/display via System Events"
+        }
       }
     }
   },
@@ -108,40 +126,34 @@
       "analog": {
         "rightStickVerticalActions": {
           "enabled": true,
-          "deadzone": 0.66,
-          "edgeTrigger": true,
+          "deadzone": 0.58,
+          "repeatIntervalMs": 140,
+          "edgeTrigger": false,
           "upAction": {
-            "type": "text",
-            "text": "/model",
-            "delayMs": 80,
-            "pressEnter": true,
-            "description": "Open /model popup from right stick up"
+            "type": "ghosttyAction",
+            "ghosttyAction": "resize_split:up,100",
+            "description": "Resize split upward"
           },
           "downAction": {
-            "type": "text",
-            "text": "/fast",
-            "delayMs": 80,
-            "pressEnter": true,
-            "description": "Open /fast from right stick down"
+            "type": "ghosttyAction",
+            "ghosttyAction": "resize_split:down,100",
+            "description": "Resize split downward"
           }
         },
         "rightStickHorizontalActions": {
           "enabled": true,
-          "deadzone": 0.62,
-          "edgeTrigger": true,
+          "deadzone": 0.58,
+          "repeatIntervalMs": 140,
+          "edgeTrigger": false,
           "leftAction": {
-            "type": "keystroke",
-            "keyCode": 44,
-            "modifiers": [],
-            "description": "Send slash (/)"
+            "type": "ghosttyAction",
+            "ghosttyAction": "resize_split:left,100",
+            "description": "Resize split to the left"
           },
           "rightAction": {
-            "type": "keystroke",
-            "keyCode": 21,
-            "modifiers": [
-              "shift"
-            ],
-            "description": "Send dollar sign ($)"
+            "type": "ghosttyAction",
+            "ghosttyAction": "resize_split:right,100",
+            "description": "Resize split to the right"
           }
         }
       },
@@ -235,24 +247,6 @@
             "type": "ghosttyAction",
             "ghosttyAction": "goto_split:right",
             "description": "Focus the split to the right"
-          }
-        },
-        "leftShoulder": {
-          "debounceMs": 200,
-          "edgeTrigger": true,
-          "action": {
-            "type": "ghosttyAction",
-            "ghosttyAction": "goto_split:next",
-            "description": "Cycle splits within current tab via Ghostty native action"
-          }
-        },
-        "rightShoulder": {
-          "debounceMs": 200,
-          "edgeTrigger": true,
-          "action": {
-            "type": "ghosttyAction",
-            "ghosttyAction": "goto_split:previous",
-            "description": "Cycle splits backward via Ghostty native action"
           }
         }
       }
