@@ -73,7 +73,7 @@ Behavior note:
 - `action` (`ActionConfig`): action to execute.
 
 ## ActionConfig
-- `type` (`"keystroke" | "holdKeystroke" | "focusApp" | "shell" | "applescript" | "ghosttyAction" | "text" | "mouseClick"`)
+- `type` (`"keystroke" | "holdKeystroke" | "focusApp" | "focusDisplay" | "shell" | "applescript" | "ghosttyAction" | "text" | "mouseClick"`)
 - Keystroke fields:
   - `keyCode` (`int`, required)
   - `modifiers` (`string[]`, optional)
@@ -86,6 +86,8 @@ Behavior note:
   - Behavior: key down on button press, key up on button release, with synthetic auto-repeat while held for non-modifier keys.
 - Focus app fields:
   - `bundleID` (`string`, required): bundle identifier of the running app whose active window should be focused.
+- Focus display fields:
+  - `direction` (`"left" | "right"`, required): move the cursor to the center of the adjacent display in that direction, wrapping across available displays.
 - Shell fields:
   - `command` (`string`, required)
 - AppleScript fields:

@@ -159,6 +159,7 @@ struct ActionConfig: Decodable {
     let postKeyCode: Int?
     let postModifiers: [String]?
     let postDelayMs: Int?
+    let direction: String?
     let bundleID: String?
     let command: String?
     let script: String?
@@ -177,6 +178,7 @@ enum ActionType: String, Decodable {
     case keystroke
     case holdKeystroke
     case focusApp
+    case focusDisplay
     case shell
     case applescript
     case ghosttyAction
@@ -363,6 +365,11 @@ struct ConfigLoader {
             guard let bundleID = action.bundleID, !bundleID.isEmpty else {
                 throw BridgeError.configValidationFailed("\(context) focusApp action requires bundleID")
             }
+        case .focusDisplay:
+            guard let direction = action.direction?.lowercased(),
+                  ["left", "right"].contains(direction) else {
+                throw BridgeError.configValidationFailed("\(context) focusDisplay action requires direction left or right")
+            }
         case .shell:
             guard let command = action.command, !command.isEmpty else {
                 throw BridgeError.configValidationFailed("\(context) shell action requires command")
@@ -539,6 +546,15 @@ final class ActionExecutor {
                 throw BridgeError.actionExecutionFailed("Accessibility permission is required for keystroke injection")
             }
 
+            if let preKeyCodeValue = action.preKeyCode {
+                let preFlags = effectiveModifierFlags(from: action.preModifiers ?? [])
+                try postKeystroke(keyCode: CGKeyCode(preKeyCodeValue), modifiers: preFlags)
+
+                if let preDelayMs = action.preDelayMs, preDelayMs > 0 {
+                    Thread.sleep(forTimeInterval: Double(preDelayMs) / 1000.0)
+                }
+            }
+
             let keyCode = CGKeyCode(keyCodeValue)
             let flags = effectiveModifierFlags(from: action.modifiers ?? [])
             try postKeystroke(keyCode: keyCode, modifiers: flags)
@@ -561,6 +577,14 @@ final class ActionExecutor {
 
             try focusApplication(bundleID: bundleID, profile: profile, source: button)
             print("[ACTION] focus-app bundleID=\(bundleID) profile=\(profile) button=\(button)")
+
+        case .focusDisplay:
+            guard let direction = action.direction else {
+                throw BridgeError.actionExecutionFailed("focusDisplay action missing direction")
+            }
+
+            try focusDisplay(direction: direction, profile: profile, source: button)
+            print("[ACTION] focus-display direction=\(direction) profile=\(profile) button=\(button)")
 
         case .shell:
             guard let command = action.command else {
@@ -755,6 +779,38 @@ final class ActionExecutor {
         print("[ACTION] pointer profile=\(profile) source=\(source) dx=\(dx) dy=\(dy)")
     }
 
+    func focusDisplay(direction: String, profile: String, source: String) throws {
+        if dryRun {
+            print("[DRY-RUN] focus-display direction=\(direction) profile=\(profile) source=\(source)")
+            return
+        }
+
+        if !AXIsProcessTrusted() {
+            throw BridgeError.actionExecutionFailed("Accessibility permission is required for display focus")
+        }
+
+        let screens = NSScreen.screens
+        guard screens.count > 1 else {
+            throw BridgeError.actionExecutionFailed("Multiple displays are required for focusDisplay")
+        }
+
+        let currentPoint = NSEvent.mouseLocation
+        let currentIndex = screenIndex(containing: currentPoint, screens: screens)
+        let normalizedDirection = direction.lowercased()
+        guard let targetIndex = targetScreenIndex(
+            from: currentIndex,
+            direction: normalizedDirection,
+            screens: screens
+        ) else {
+            throw BridgeError.actionExecutionFailed("Unsupported focusDisplay direction: \(direction)")
+        }
+
+        let targetScreen = screens[targetIndex]
+        try movePointerToScreenCenter(targetScreen, profile: profile, source: source)
+        Thread.sleep(forTimeInterval: 0.03)
+        try clickMouse(button: .left, profile: profile, source: source)
+    }
+
     func clickMouse(button: CGMouseButton, profile: String, source: String) throws {
         if dryRun {
             print("[DRY-RUN] mouse-click profile=\(profile) source=\(source) button=\(button.rawValue)")
@@ -765,7 +821,7 @@ final class ActionExecutor {
             throw BridgeError.actionExecutionFailed("Accessibility permission is required for mouse click injection")
         }
 
-        let location = NSEvent.mouseLocation
+        let location = currentCursorLocation()
         let mouseType: CGEventType
         let mouseUpType: CGEventType
 
@@ -803,6 +859,10 @@ final class ActionExecutor {
         mouseDown.post(tap: .cghidEventTap)
         mouseUp.post(tap: .cghidEventTap)
         print("[ACTION] mouse-click profile=\(profile) source=\(source) button=\(button.rawValue)")
+    }
+
+    private func currentCursorLocation() -> CGPoint {
+        CGEvent(source: nil)?.location ?? NSEvent.mouseLocation
     }
 
     func focusFrontmostWindow(profile: String, source: String) throws {
@@ -1148,6 +1208,103 @@ final class ActionExecutor {
 
         mouseDown.post(tap: .cghidEventTap)
         mouseUp.post(tap: .cghidEventTap)
+    }
+
+    private func movePointerAbsolute(to location: CGPoint, profile: String, source: String) throws {
+        let result = CGWarpMouseCursorPosition(location)
+        guard result == .success else {
+            throw BridgeError.actionExecutionFailed("Failed to warp mouse cursor")
+        }
+        print("[ACTION] pointer-absolute profile=\(profile) source=\(source) x=\(Int(location.x)) y=\(Int(location.y))")
+    }
+
+    private func movePointerToScreenCenter(_ screen: NSScreen, profile: String, source: String) throws {
+        guard let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            throw BridgeError.actionExecutionFailed("Failed to read target display identifier")
+        }
+
+        let displayID = CGDirectDisplayID(screenNumber.uint32Value)
+        let frame = screen.visibleFrame
+        let localPoint = CGPoint(x: frame.width / 2.0, y: frame.height / 2.0)
+        CGDisplayMoveCursorToPoint(displayID, localPoint)
+        print("[ACTION] pointer-screen-center profile=\(profile) source=\(source) displayID=\(displayID) x=\(Int(localPoint.x)) y=\(Int(localPoint.y))")
+    }
+
+    private func screenIndex(containing point: CGPoint, screens: [NSScreen]) -> Int {
+        if let index = screens.firstIndex(where: { $0.frame.contains(point) }) {
+            return index
+        }
+
+        var bestIndex = 0
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for (index, screen) in screens.enumerated() {
+            let frame = screen.frame
+            let center = CGPoint(x: frame.midX, y: frame.midY)
+            let dx = center.x - point.x
+            let dy = center.y - point.y
+            let distance = (dx * dx) + (dy * dy)
+            if distance < bestDistance {
+                bestDistance = distance
+                bestIndex = index
+            }
+        }
+        return bestIndex
+    }
+
+    private func targetScreenIndex(from currentIndex: Int, direction: String, screens: [NSScreen]) -> Int? {
+        guard screens.indices.contains(currentIndex) else {
+            return nil
+        }
+
+        let currentCenter = screenCenter(screens[currentIndex])
+        let otherScreens = screens.enumerated().filter { $0.offset != currentIndex }
+
+        let directionalCandidates: [(index: Int, horizontalBias: CGFloat, distance: CGFloat)] = otherScreens.compactMap { entry in
+            let candidateCenter = screenCenter(entry.element)
+            let deltaX = candidateCenter.x - currentCenter.x
+            let deltaY = candidateCenter.y - currentCenter.y
+
+            switch direction {
+            case "left":
+                guard deltaX < -1 else { return nil }
+            case "right":
+                guard deltaX > 1 else { return nil }
+            default:
+                return nil
+            }
+
+            return (
+                index: entry.offset,
+                horizontalBias: abs(deltaX),
+                distance: (deltaX * deltaX) + (deltaY * deltaY)
+            )
+        }
+
+        if let bestDirectional = directionalCandidates.min(by: {
+            if $0.horizontalBias == $1.horizontalBias {
+                return $0.distance < $1.distance
+            }
+            return $0.horizontalBias < $1.horizontalBias
+        }) {
+            return bestDirectional.index
+        }
+
+        return otherScreens.min(by: {
+            let lhsCenter = screenCenter($0.element)
+            let rhsCenter = screenCenter($1.element)
+            let lhsDX = lhsCenter.x - currentCenter.x
+            let lhsDY = lhsCenter.y - currentCenter.y
+            let rhsDX = rhsCenter.x - currentCenter.x
+            let rhsDY = rhsCenter.y - currentCenter.y
+            let lhsDistance = (lhsDX * lhsDX) + (lhsDY * lhsDY)
+            let rhsDistance = (rhsDX * rhsDX) + (rhsDY * rhsDY)
+            return lhsDistance < rhsDistance
+        })?.offset
+    }
+
+    private func screenCenter(_ screen: NSScreen) -> CGPoint {
+        let frame = screen.visibleFrame
+        return CGPoint(x: frame.midX, y: frame.midY)
     }
 
     private func executeGhosttyAction(_ action: String) throws {

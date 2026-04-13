@@ -1,6 +1,8 @@
 {
   "appProfiles": {
-    "com.mitchellh.ghostty": "ghostty"
+    "company.thebrowser.Browser": "arc",
+    "com.mitchellh.ghostty": "ghostty",
+    "net.whatsapp.WhatsApp": "whatsapp"
   },
   "alwaysOn": {
     "analog": {
@@ -107,18 +109,18 @@
         "debounceMs": 140,
         "edgeTrigger": true,
         "action": {
-          "type": "focusApp",
-          "bundleID": "company.thebrowser.Browser",
-          "description": "Focus Arc"
+          "type": "focusDisplay",
+          "direction": "left",
+          "description": "Move cursor focus to the display on the left"
         }
       },
       "dpadRight": {
         "debounceMs": 140,
         "edgeTrigger": true,
         "action": {
-          "type": "focusApp",
-          "bundleID": "com.mitchellh.ghostty",
-          "description": "Focus Ghostty"
+          "type": "focusDisplay",
+          "direction": "right",
+          "description": "Move cursor focus to the display on the right"
         }
       },
       "leftShoulder": {
@@ -150,6 +152,35 @@
     }
   },
   "profiles": {
+    "arc": {
+      "enabled": true,
+      "mappings": {
+        "dpadUp": {
+          "debounceMs": 160,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 13,
+            "modifiers": [
+              "command"
+            ],
+            "description": "Close the current Arc tab"
+          }
+        },
+        "thumbsticksBoth": {
+          "debounceMs": 220,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 17,
+            "modifiers": [
+              "command"
+            ],
+            "description": "Open a new Arc tab with search focused"
+          }
+        }
+      }
+    },
     "ghostty": {
       "enabled": true,
       "analog": {
@@ -301,18 +332,74 @@
           "debounceMs": 160,
           "edgeTrigger": true,
           "action": {
-            "type": "focusApp",
-            "bundleID": "company.thebrowser.Browser",
-            "description": "Focus Arc"
+            "type": "focusDisplay",
+            "direction": "left",
+            "description": "Move cursor focus to the display on the left"
           }
         },
         "dpadRight": {
           "debounceMs": 160,
           "edgeTrigger": true,
           "action": {
-            "type": "focusApp",
-            "bundleID": "com.mitchellh.ghostty",
-            "description": "Focus Ghostty"
+            "type": "focusDisplay",
+            "direction": "right",
+            "description": "Move cursor focus to the display on the right"
+          }
+        }
+      }
+    },
+    "whatsapp": {
+      "enabled": true,
+      "mappings": {
+        "y": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "preKeyCode": 0,
+            "preModifiers": [
+              "command"
+            ],
+            "preDelayMs": 40,
+            "keyCode": 51,
+            "modifiers": [],
+            "description": "Clear the WhatsApp chat input"
+          }
+        },
+        "x": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 48,
+            "modifiers": [],
+            "description": "Move focus into the active WhatsApp chat"
+          }
+        },
+        "dpadUp": {
+          "debounceMs": 140,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 33,
+            "modifiers": [
+              "command",
+              "shift"
+            ],
+            "description": "Move to the previous WhatsApp chat"
+          }
+        },
+        "dpadDown": {
+          "debounceMs": 140,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 30,
+            "modifiers": [
+              "command",
+              "shift"
+            ],
+            "description": "Move to the next WhatsApp chat"
           }
         }
       }
