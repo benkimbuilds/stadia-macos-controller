@@ -154,7 +154,65 @@
   "profiles": {
     "arc": {
       "enabled": true,
+      "analog": {
+        "leftStickPointer": {
+          "enabled": true,
+          "deadzone": 0.24,
+          "intervalMs": 18,
+          "minPixelsPerTick": 2,
+          "maxPixelsPerTick": 24,
+          "responseExponent": 2.2,
+          "invertX": false,
+          "invertY": true
+        }
+      },
       "mappings": {
+        "leftTrigger": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 48,
+            "modifiers": [
+              "shift",
+              "control"
+            ],
+            "description": "Send Shift-Control-Tab"
+          }
+        },
+        "rightTrigger": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 48,
+            "modifiers": [
+              "control"
+            ],
+            "description": "Send Control-Tab"
+          }
+        },
+        "b": {
+          "debounceMs": 80,
+          "edgeTrigger": true,
+          "action": {
+            "type": "mouseClick",
+            "mouseButton": "left",
+            "description": "Click the current cursor location"
+          }
+        },
+        "x": {
+          "debounceMs": 120,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 15,
+            "modifiers": [
+              "command"
+            ],
+            "description": "Refresh the current Arc page"
+          }
+        },
         "dpadUp": {
           "debounceMs": 160,
           "edgeTrigger": true,

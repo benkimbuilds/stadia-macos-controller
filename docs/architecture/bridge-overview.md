@@ -37,7 +37,7 @@ flowchart TD
 - `ConfigLoader` validates `config/mappings.json` on startup and on hot reload before the runtime adopts new settings.
 - `ControllerBridge` polls inputs, tracks debounce and hold state, watches the config file, and coordinates profile resolution plus action dispatch.
 - `ProfileResolver` maps the frontmost macOS bundle ID to one configured profile name.
-- `config/mappings.json` is the source of truth for app profiles, `alwaysOn` controls, button mappings, analog behavior, and safety defaults.
+- `config/mappings.json` is the source of truth for app profiles, `alwaysOn` controls, button mappings, analog behavior, and safety defaults. Analog behavior can map either stick to scrolling, directional actions, or pointer movement on a per-profile basis.
 - `ActionExecutor` dispatches the chosen action through macOS input APIs, shell helpers, or Ghostty's AppleScript surface.
 - Ghostty-specific actions can go through three paths:
   - plain keystrokes

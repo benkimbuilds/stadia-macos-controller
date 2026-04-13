@@ -93,6 +93,7 @@ struct ProfileConfig: Decodable {
 }
 
 struct AnalogConfig: Decodable {
+    let leftStickPointer: StickPointerConfig?
     let leftStickVerticalScroll: StickVerticalScrollConfig?
     let leftStickVerticalActions: StickVerticalActionConfig?
     let leftStickHorizontalActions: StickHorizontalActionConfig?
@@ -267,6 +268,9 @@ struct ConfigLoader {
             }
 
             if let analogConfig = profile.analog {
+                if let pointer = analogConfig.leftStickPointer {
+                    try validateStickPointerConfig(pointer, profileName: profileName, configName: "leftStickPointer")
+                }
                 if let left = analogConfig.leftStickVerticalScroll {
                     try validateVerticalScrollConfig(left, profileName: profileName, configName: "leftStickVerticalScroll")
                 }
@@ -315,6 +319,9 @@ struct ConfigLoader {
             }
 
             if let analogConfig = alwaysOn.analog {
+                if let pointer = analogConfig.leftStickPointer {
+                    try validateStickPointerConfig(pointer, profileName: "alwaysOn", configName: "leftStickPointer")
+                }
                 if let left = analogConfig.leftStickVerticalScroll {
                     try validateVerticalScrollConfig(left, profileName: "alwaysOn", configName: "leftStickVerticalScroll")
                 }
@@ -770,20 +777,12 @@ final class ActionExecutor {
             throw BridgeError.actionExecutionFailed("Accessibility permission is required for pointer injection")
         }
 
-        let current = NSEvent.mouseLocation
+        let current = currentCursorLocation()
         let target = CGPoint(x: current.x + CGFloat(dx), y: current.y + CGFloat(dy))
-
-        guard let eventSource = CGEventSource(stateID: .hidSystemState),
-              let moveEvent = CGEvent(
-                mouseEventSource: eventSource,
-                mouseType: .mouseMoved,
-                mouseCursorPosition: target,
-                mouseButton: .left
-              ) else {
-            throw BridgeError.actionExecutionFailed("Failed to create pointer move event")
+        let warpResult = CGWarpMouseCursorPosition(target)
+        guard warpResult == .success else {
+            throw BridgeError.actionExecutionFailed("Failed to warp mouse cursor")
         }
-
-        moveEvent.post(tap: .cghidEventTap)
         print("[ACTION] pointer profile=\(profile) source=\(source) dx=\(dx) dy=\(dy)")
     }
 
@@ -1380,6 +1379,7 @@ final class ControllerBridge: NSObject {
     private var lastAnalogScrollAt: [String: Date] = [:]
     private var lastAnalogActionAt: [String: Date] = [:]
     private var lastDiagnosticAnalogValues: [String: Double] = [:]
+    private var smoothedPointerValues: [String: CGPoint] = [:]
     private var polledButtonStates: [String: Bool] = [:]
     private var analogDirectionStates: [String: Int] = [:]
     private var activeGamepads: [String: GCExtendedGamepad] = [:]
@@ -1497,6 +1497,7 @@ final class ControllerBridge: NSObject {
         lastAnalogScrollAt = lastAnalogScrollAt.filter { !$0.key.hasPrefix("\(controllerID)::") }
         lastAnalogActionAt = lastAnalogActionAt.filter { !$0.key.hasPrefix("\(controllerID)::") }
         lastDiagnosticAnalogValues = lastDiagnosticAnalogValues.filter { !$0.key.hasPrefix("\(controllerID)::") }
+        smoothedPointerValues = smoothedPointerValues.filter { !$0.key.hasPrefix("\(controllerID)::") }
         polledButtonStates = polledButtonStates.filter { !$0.key.hasPrefix("\(controllerID)::") }
         analogDirectionStates = analogDirectionStates.filter { !$0.key.hasPrefix("\(controllerID)::") }
         activeHolds = activeHolds.filter { !$0.key.hasPrefix("\(controllerID)::") }
@@ -1586,6 +1587,7 @@ final class ControllerBridge: NSObject {
             }
 
             lastAnalogActionAt.removeAll()
+            smoothedPointerValues.removeAll()
             analogDirectionStates.removeAll()
         } catch {
             print("[CONFIG] Reload failed: \(error.localizedDescription)")
@@ -1811,6 +1813,11 @@ final class ControllerBridge: NSObject {
                 return false
             }
 
+            if let leftPointer = profile.analog?.leftStickPointer,
+               leftPointer.enabled ?? true {
+                return true
+            }
+
             if let leftVerticalActions = profile.analog?.leftStickVerticalActions,
                leftVerticalActions.enabled ?? true {
                 return true
@@ -1913,36 +1920,82 @@ final class ControllerBridge: NSObject {
 
         let activeProfileName = profileResolver.resolveActiveProfile()
         let activeProfile = activeProfileName.flatMap { config.profiles[$0] }
-        let pointerSource: (profileName: String, config: StickPointerConfig)?
+        let rightPointerSource: (profileName: String, config: StickPointerConfig)?
         if let globalPointer = config.alwaysOn?.analog?.rightStickPointer, globalPointer.enabled ?? true {
-            pointerSource = ("alwaysOn", globalPointer)
+            rightPointerSource = ("alwaysOn", globalPointer)
         } else if let activeProfileName,
                   let profile = activeProfile,
                   profile.enabled ?? true,
                   let profilePointer = profile.analog?.rightStickPointer,
                   profilePointer.enabled ?? true {
-            pointerSource = (activeProfileName, profilePointer)
+            rightPointerSource = (activeProfileName, profilePointer)
         } else {
-            pointerSource = nil
+            rightPointerSource = nil
         }
 
-        guard let pointerSource else {
-            return
+        if let rightPointerSource {
+            processPointerMove(
+                controllerID: controllerID,
+                profileName: rightPointerSource.profileName,
+                configName: "rightStickPointer",
+                source: "rightStick",
+                rawX: Double(gamepad.rightThumbstick.xAxis.value),
+                rawY: Double(gamepad.rightThumbstick.yAxis.value),
+                config: rightPointerSource.config
+            )
         }
 
-        let pointer = pointerSource.config
+        let leftPointerSource: (profileName: String, config: StickPointerConfig)?
+        if let globalPointer = config.alwaysOn?.analog?.leftStickPointer, globalPointer.enabled ?? true {
+            leftPointerSource = ("alwaysOn", globalPointer)
+        } else if let activeProfileName,
+                  let profile = activeProfile,
+                  profile.enabled ?? true,
+                  let profilePointer = profile.analog?.leftStickPointer,
+                  profilePointer.enabled ?? true {
+            leftPointerSource = (activeProfileName, profilePointer)
+        } else {
+            leftPointerSource = nil
+        }
 
-        let rawX = Double(gamepad.rightThumbstick.xAxis.value) * (pointer.invertX == true ? -1.0 : 1.0)
-        let rawY = Double(gamepad.rightThumbstick.yAxis.value) * (pointer.invertY == true ? -1.0 : 1.0)
+        if let leftPointerSource {
+            processPointerMove(
+                controllerID: controllerID,
+                profileName: leftPointerSource.profileName,
+                configName: "leftStickPointer",
+                source: "leftStick",
+                rawX: Double(gamepad.leftThumbstick.xAxis.value),
+                rawY: Double(gamepad.leftThumbstick.yAxis.value),
+                config: leftPointerSource.config
+            )
+        }
+    }
+
+    private func processPointerMove(
+        controllerID: String,
+        profileName: String,
+        configName: String,
+        source: String,
+        rawX: Double,
+        rawY: Double,
+        config pointer: StickPointerConfig
+    ) {
+        let adjustedRawX = rawX * (pointer.invertX == true ? -1.0 : 1.0)
+        let adjustedRawY = rawY * (pointer.invertY == true ? -1.0 : 1.0)
+        let smoothingKey = "\(controllerID)::\(profileName)::\(configName)::smoothed"
+        let previousSmoothed = smoothedPointerValues[smoothingKey] ?? CGPoint(x: adjustedRawX, y: adjustedRawY)
+        let smoothingAlpha = 0.35
+        let smoothedX = (previousSmoothed.x * (1.0 - smoothingAlpha)) + (adjustedRawX * smoothingAlpha)
+        let smoothedY = (previousSmoothed.y * (1.0 - smoothingAlpha)) + (adjustedRawY * smoothingAlpha)
+        smoothedPointerValues[smoothingKey] = CGPoint(x: smoothedX, y: smoothedY)
         let deadzone = min(max(pointer.deadzone ?? 0.16, 0.0), 0.99)
-        let magnitude = sqrt((rawX * rawX) + (rawY * rawY))
-
-        guard magnitude > deadzone else {
-            return
-        }
+        let axisSnapRatio = 0.82
+        let dominantMagnitude = max(abs(smoothedX), abs(smoothedY))
+        let suppressedRawX = abs(smoothedX) >= dominantMagnitude * axisSnapRatio ? smoothedX : 0.0
+        let suppressedRawY = abs(smoothedY) >= dominantMagnitude * axisSnapRatio ? smoothedY : 0.0
 
         let intervalMs = max(1, pointer.intervalMs ?? 16)
-        let throttleKey = "\(controllerID)::\(pointerSource.profileName)::rightStickPointer"
+        let throttleKey = "\(controllerID)::\(profileName)::\(configName)"
         let now = Date()
         if let last = lastAnalogScrollAt[throttleKey] {
             let deltaMs = Int(now.timeIntervalSince(last) * 1000)
@@ -1954,21 +2007,22 @@ final class ControllerBridge: NSObject {
         let minPixels = max(1, pointer.minPixelsPerTick ?? 1)
         let maxPixels = max(minPixels, pointer.maxPixelsPerTick ?? 24)
         let responseExponent = max(0.1, pointer.responseExponent ?? 1.6)
-        let normalizedMagnitude = min(1.0, max(0.0, (magnitude - deadzone) / max(0.001, 1.0 - deadzone)))
-        let curvedMagnitude = pow(normalizedMagnitude, responseExponent)
-        let pixels = max(1.0, Double(minPixels) + curvedMagnitude * Double(maxPixels - minPixels))
 
-        let unitX = rawX / max(magnitude, 0.0001)
-        let unitY = rawY / max(magnitude, 0.0001)
-        var dx = Int(round(unitX * pixels))
-        var dy = Int(round(unitY * pixels))
+        func axisPixels(for value: Double) -> Int {
+            let magnitude = abs(value)
+            guard magnitude > deadzone else {
+                return 0
+            }
 
-        if dx == 0 && abs(rawX) > deadzone {
-            dx = rawX >= 0 ? 1 : -1
+            let normalized = min(1.0, max(0.0, (magnitude - deadzone) / max(0.001, 1.0 - deadzone)))
+            let curved = pow(normalized, responseExponent)
+            let pixels = max(1.0, Double(minPixels) + curved * Double(maxPixels - minPixels))
+            let signedPixels = Int(round(pixels)) * (value >= 0 ? 1 : -1)
+            return signedPixels == 0 ? (value >= 0 ? 1 : -1) : signedPixels
         }
-        if dy == 0 && abs(rawY) > deadzone {
-            dy = rawY >= 0 ? 1 : -1
-        }
+
+        let dx = axisPixels(for: suppressedRawX)
+        let dy = axisPixels(for: suppressedRawY)
         guard dx != 0 || dy != 0 else {
             return
         }
@@ -1977,8 +2031,8 @@ final class ControllerBridge: NSObject {
             try actionExecutor.movePointerRelative(
                 dx: dx,
                 dy: dy,
-                profile: pointerSource.profileName,
-                source: "rightStick"
+                profile: profileName,
+                source: source
             )
             lastAnalogScrollAt[throttleKey] = now
         } catch {

@@ -93,6 +93,12 @@ Non-profiled apps:
 - If frontmost app is not mapped in `appProfiles`, only controls listed in `alwaysOn` still execute.
 - All other controls log `[SKIP] no active app profile`.
 
+Arc profile defaults:
+- Left stick moves the cursor.
+- `L2` and `R2` send `Shift-Control-Tab` and `Control-Tab`.
+- `B` clicks at the current cursor location.
+- `X` refreshes the current page (`Cmd-R`).
+
 If your Ghostty split binding differs, edit `config/mappings.json`.
 For design intent behind the current layout, see `docs/references/ghostty-mapping-rationale.md`.
 If Ghostty AppleScript is disabled or you are on Ghostty older than `1.3.0`, the `share` mapping must be changed back to a plain keystroke or another supported action type.

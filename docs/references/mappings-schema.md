@@ -23,6 +23,7 @@ Behavior note:
 - `mappings` (`object<string, MappingConfig>`): button name -> mapping.
 
 ## AnalogConfig
+- `leftStickPointer` (`StickPointerConfig`, optional): map left stick `X/Y` axes to mouse pointer movement.
 - `leftStickVerticalScroll` (`StickVerticalScrollConfig`, optional): map left stick `Y` axis to vertical scrolling.
 - `leftStickVerticalActions` (`StickVerticalActionConfig`, optional): map left stick `Y` tilt into up/down discrete actions.
 - `leftStickHorizontalActions` (`StickHorizontalActionConfig`, optional): map left stick `X` tilt into left/right discrete actions.
@@ -42,7 +43,7 @@ Behavior note:
 
 ## StickPointerConfig
 - `enabled` (`bool`, optional, default `true`)
-- `deadzone` (`double`, optional, default `0.16`): ignore small right-stick drift (`>= 0`, `< 1`).
+- `deadzone` (`double`, optional, default `0.16`): ignore small stick drift (`>= 0`, `< 1`).
 - `intervalMs` (`int`, optional, default `16`): minimum time between pointer move ticks.
 - `minPixelsPerTick` (`int`, optional, default `1`): slowest pointer step outside deadzone.
 - `maxPixelsPerTick` (`int`, optional, default `24`): fastest pointer step at full tilt.
