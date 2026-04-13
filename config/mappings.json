@@ -118,9 +118,12 @@
         "debounceMs": 140,
         "edgeTrigger": true,
         "action": {
-          "type": "focusDisplay",
-          "direction": "right",
-          "description": "Move cursor focus to the display on the right"
+          "type": "keystroke",
+          "keyCode": 9,
+          "modifiers": [
+            "command"
+          ],
+          "description": "Send Command-V everywhere"
         }
       },
       "leftShoulder": {
@@ -208,6 +211,23 @@
             "type": "mouseClick",
             "mouseButton": "left",
             "description": "Click the current cursor location"
+          }
+        },
+        "y": {
+          "debounceMs": 160,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 37,
+            "modifiers": [
+              "command"
+            ],
+            "postKeyCode": 8,
+            "postModifiers": [
+              "command"
+            ],
+            "postDelayMs": 80,
+            "description": "Focus the Arc address bar and copy the current page URL"
           }
         },
         "x": {
@@ -408,9 +428,12 @@
           "debounceMs": 160,
           "edgeTrigger": true,
           "action": {
-            "type": "focusDisplay",
-            "direction": "right",
-            "description": "Move cursor focus to the display on the right"
+            "type": "keystroke",
+            "keyCode": 9,
+            "modifiers": [
+              "command"
+            ],
+            "description": "Paste from the clipboard"
           }
         }
       }

@@ -98,6 +98,7 @@ Arc profile defaults:
 - Right stick scrolls vertically.
 - `L2` and `R2` send `Shift-Control-Tab` and `Control-Tab`.
 - `B` clicks at the current cursor location.
+- `Y` copies the current page URL.
 - `X` refreshes the current page (`Cmd-R`).
 
 If your Ghostty split binding differs, edit `config/mappings.json`.

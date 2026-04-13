@@ -1984,15 +1984,21 @@ final class ControllerBridge: NSObject {
         let adjustedRawY = rawY * (pointer.invertY == true ? -1.0 : 1.0)
         let smoothingKey = "\(controllerID)::\(profileName)::\(configName)::smoothed"
         let previousSmoothed = smoothedPointerValues[smoothingKey] ?? CGPoint(x: adjustedRawX, y: adjustedRawY)
-        let smoothingAlpha = 0.35
+        let deadzone = min(max(pointer.deadzone ?? 0.16, 0.0), 0.99)
+        let smoothingAlpha = 0.14
         let smoothedX = (previousSmoothed.x * (1.0 - smoothingAlpha)) + (adjustedRawX * smoothingAlpha)
         let smoothedY = (previousSmoothed.y * (1.0 - smoothingAlpha)) + (adjustedRawY * smoothingAlpha)
-        smoothedPointerValues[smoothingKey] = CGPoint(x: smoothedX, y: smoothedY)
-        let deadzone = min(max(pointer.deadzone ?? 0.16, 0.0), 0.99)
-        let axisSnapRatio = 0.82
-        let dominantMagnitude = max(abs(smoothedX), abs(smoothedY))
-        let suppressedRawX = abs(smoothedX) >= dominantMagnitude * axisSnapRatio ? smoothedX : 0.0
-        let suppressedRawY = abs(smoothedY) >= dominantMagnitude * axisSnapRatio ? smoothedY : 0.0
+        let settledSmoothed: CGPoint
+        if abs(adjustedRawX) <= deadzone && abs(adjustedRawY) <= deadzone {
+            settledSmoothed = .zero
+        } else {
+            settledSmoothed = CGPoint(x: smoothedX, y: smoothedY)
+        }
+        smoothedPointerValues[smoothingKey] = settledSmoothed
+        let axisSnapRatio = 0.94
+        let dominantMagnitude = max(abs(settledSmoothed.x), abs(settledSmoothed.y))
+        let suppressedRawX = abs(settledSmoothed.x) >= dominantMagnitude * axisSnapRatio ? settledSmoothed.x : 0.0
+        let suppressedRawY = abs(settledSmoothed.y) >= dominantMagnitude * axisSnapRatio ? settledSmoothed.y : 0.0
 
         let intervalMs = max(1, pointer.intervalMs ?? 16)
         let throttleKey = "\(controllerID)::\(profileName)::\(configName)"
