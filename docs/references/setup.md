@@ -101,6 +101,17 @@ Arc profile defaults:
 - `Y` copies the current page URL.
 - `X` refreshes the current page (`Cmd-R`).
 
+Slack profile defaults:
+- Left stick `Up/Down` moves to the previous and next Slack channel or DM in the sidebar.
+- Right stick `Up/Down` moves focus between Slack messages or thread replies.
+- Right stick `Left` closes the Slack thread reply focus and returns to the main conversation.
+- Right stick `Right` opens or replies in the thread for the focused Slack message.
+- Left thumbstick click moves to the previous Slack channel or DM in the sidebar.
+- Right thumbstick click opens or replies in the thread for the focused Slack message.
+- D-pad `Up/Down` move focus between Slack messages or thread replies.
+- `X` opens or replies in the thread for the focused Slack message.
+- `Y` clears the Slack thread reply draft and returns focus to the main conversation.
+
 If your Ghostty split binding differs, edit `config/mappings.json`.
 For design intent behind the current layout, see `docs/references/ghostty-mapping-rationale.md`.
 If Ghostty AppleScript is disabled or you are on Ghostty older than `1.3.0`, the `share` mapping must be changed back to a plain keystroke or another supported action type.

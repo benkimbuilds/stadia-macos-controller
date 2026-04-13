@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "active": true,
+  "skill": "autopilot",
+  "keyword": "I want a",
+  "phase": "planning",
+  "activated_at": "2026-04-13T19:03:41.132Z",
+  "updated_at": "2026-04-13T19:03:41.132Z",
+  "source": "keyword-detector",
+  "session_id": "",
+  "thread_id": "019d8792-4c51-7ab1-ac0f-95837ffd6419",
+  "turn_id": "019d8839-9572-7dc3-9eaa-66e6c6a4791f",
+  "iteration": 20,
+  "last_turn_at": "2026-04-13T20:03:20.799Z"
+}

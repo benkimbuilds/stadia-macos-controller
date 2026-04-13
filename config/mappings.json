@@ -2,6 +2,7 @@
   "appProfiles": {
     "company.thebrowser.Browser": "arc",
     "com.mitchellh.ghostty": "ghostty",
+    "com.tinyspeck.slackmacgap": "slack",
     "net.whatsapp.WhatsApp": "whatsapp"
   },
   "alwaysOn": {
@@ -168,14 +169,44 @@
           "invertX": false,
           "invertY": true
         },
-        "rightStickVerticalScroll": {
+        "rightStickVerticalActions": {
           "enabled": true,
-          "deadzone": 0.18,
-          "intervalMs": 35,
-          "minLinesPerTick": 1,
-          "maxLinesPerTick": 10,
-          "responseExponent": 2.0,
-          "invert": false
+          "deadzone": 0.58,
+          "repeatIntervalMs": 140,
+          "edgeTrigger": false,
+          "upAction": {
+            "type": "keystroke",
+            "keyCode": 126,
+            "modifiers": [],
+            "description": "Move to the previous focused Slack message or thread reply"
+          },
+          "downAction": {
+            "type": "keystroke",
+            "keyCode": 125,
+            "modifiers": [],
+            "description": "Move to the next focused Slack message or thread reply"
+          }
+        },
+        "rightStickHorizontalActions": {
+          "enabled": true,
+          "deadzone": 0.58,
+          "repeatIntervalMs": 180,
+          "edgeTrigger": true,
+          "leftAction": {
+            "type": "keystroke",
+            "keyCode": 53,
+            "modifiers": [],
+            "postKeyCode": 123,
+            "postModifiers": [],
+            "postDelayMs": 40,
+            "description": "Close the Slack thread reply focus and return to the main conversation"
+          },
+          "rightAction": {
+            "type": "keystroke",
+            "keyCode": 17,
+            "modifiers": [],
+            "description": "Open or reply in the thread for the focused Slack message"
+          }
         }
       },
       "mappings": {
@@ -434,6 +465,144 @@
               "command"
             ],
             "description": "Paste from the clipboard"
+          }
+        }
+      }
+    },
+    "slack": {
+      "enabled": true,
+      "analog": {
+        "leftStickVerticalActions": {
+          "enabled": true,
+          "deadzone": 0.58,
+          "repeatIntervalMs": 180,
+          "edgeTrigger": true,
+          "upAction": {
+            "type": "keystroke",
+            "keyCode": 126,
+            "modifiers": [
+              "option"
+            ],
+            "description": "Move to the previous Slack channel or DM in the sidebar"
+          },
+          "downAction": {
+            "type": "keystroke",
+            "keyCode": 125,
+            "modifiers": [
+              "option"
+            ],
+            "description": "Move to the next Slack channel or DM in the sidebar"
+          }
+        },
+        "rightStickVerticalActions": {
+          "enabled": true,
+          "deadzone": 0.58,
+          "repeatIntervalMs": 140,
+          "edgeTrigger": false,
+          "upAction": {
+            "type": "keystroke",
+            "keyCode": 126,
+            "modifiers": [],
+            "description": "Move to the previous focused Slack message or thread reply"
+          },
+          "downAction": {
+            "type": "keystroke",
+            "keyCode": 125,
+            "modifiers": [],
+            "description": "Move to the next focused Slack message or thread reply"
+          }
+        },
+        "rightStickHorizontalActions": {
+          "enabled": true,
+          "deadzone": 0.58,
+          "repeatIntervalMs": 180,
+          "edgeTrigger": true,
+          "leftAction": {
+            "type": "keystroke",
+            "keyCode": 53,
+            "modifiers": [],
+            "postKeyCode": 123,
+            "postModifiers": [],
+            "postDelayMs": 40,
+            "description": "Close the Slack thread reply focus and return to the main conversation"
+          },
+          "rightAction": {
+            "type": "keystroke",
+            "keyCode": 17,
+            "modifiers": [],
+            "description": "Open or reply in the thread for the focused Slack message"
+          }
+        }
+      },
+      "mappings": {
+        "leftThumbstickButton": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 126,
+            "modifiers": [
+              "option"
+            ],
+            "description": "Move to the previous Slack channel or DM in the sidebar"
+          }
+        },
+        "rightThumbstickButton": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 17,
+            "modifiers": [],
+            "description": "Open or reply in the thread for the focused Slack message"
+          }
+        },
+        "dpadUp": {
+          "debounceMs": 140,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 126,
+            "modifiers": [],
+            "description": "Move to the previous focused Slack message or thread reply"
+          }
+        },
+        "dpadDown": {
+          "debounceMs": 140,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 125,
+            "modifiers": [],
+            "description": "Move to the next focused Slack message or thread reply"
+          }
+        },
+        "x": {
+          "debounceMs": 160,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "keyCode": 17,
+            "modifiers": [],
+            "description": "Open or reply in the thread for the focused Slack message"
+          }
+        },
+        "y": {
+          "debounceMs": 160,
+          "edgeTrigger": true,
+          "action": {
+            "type": "keystroke",
+            "preKeyCode": 0,
+            "preModifiers": [
+              "command"
+            ],
+            "preDelayMs": 40,
+            "keyCode": 51,
+            "modifiers": [],
+            "postKeyCode": 123,
+            "postModifiers": [],
+            "postDelayMs": 80,
+            "description": "Clear the Slack thread reply draft and return focus to the main conversation"
           }
         }
       }
