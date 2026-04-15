@@ -162,52 +162,22 @@
       "analog": {
         "leftStickPointer": {
           "enabled": true,
-          "deadzone": 0.24,
-          "intervalMs": 16,
-          "minPixelsPerTick": 4,
-          "maxPixelsPerTick": 48,
-          "responseExponent": 2.2,
+          "deadzone": 0.16,
+          "intervalMs": 8,
+          "minPixelsPerTick": 10,
+          "maxPixelsPerTick": 160,
+          "responseExponent": 1.4,
           "invertX": false,
           "invertY": true
         },
-        "rightStickVerticalActions": {
+        "rightStickVerticalScroll": {
           "enabled": true,
-          "deadzone": 0.58,
-          "repeatIntervalMs": 140,
-          "edgeTrigger": false,
-          "upAction": {
-            "type": "keystroke",
-            "keyCode": 126,
-            "modifiers": [],
-            "description": "Move to the previous focused Slack message or thread reply"
-          },
-          "downAction": {
-            "type": "keystroke",
-            "keyCode": 125,
-            "modifiers": [],
-            "description": "Move to the next focused Slack message or thread reply"
-          }
-        },
-        "rightStickHorizontalActions": {
-          "enabled": true,
-          "deadzone": 0.58,
-          "repeatIntervalMs": 180,
-          "edgeTrigger": true,
-          "leftAction": {
-            "type": "keystroke",
-            "keyCode": 53,
-            "modifiers": [],
-            "postKeyCode": 123,
-            "postModifiers": [],
-            "postDelayMs": 40,
-            "description": "Close the Slack thread reply focus and return to the main conversation"
-          },
-          "rightAction": {
-            "type": "keystroke",
-            "keyCode": 17,
-            "modifiers": [],
-            "description": "Open or reply in the thread for the focused Slack message"
-          }
+          "deadzone": 0.16,
+          "intervalMs": 12,
+          "minLinesPerTick": 4,
+          "maxLinesPerTick": 28,
+          "responseExponent": 1.15,
+          "invert": false
         }
       },
       "mappings": {
@@ -629,13 +599,22 @@
             "description": "Move to the next Codex chat thread"
           }
         },
+        "x": {
+          "debounceMs": 220,
+          "edgeTrigger": true,
+          "action": {
+            "type": "applescript",
+            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\nend tell",
+            "description": "Focus the Codex chat box"
+          }
+        },
         "y": {
           "debounceMs": 220,
           "edgeTrigger": true,
           "action": {
             "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    if (count of windows) is 0 then error \"No Codex window found\"\n    set targetWindow to missing value\n    repeat with candidateWindow in windows\n      try\n        if description of candidateWindow is \"standard window\" then\n          set targetWindow to candidateWindow\n          exit repeat\n        end if\n      end try\n    end repeat\n    if targetWindow is missing value then set targetWindow to window 1\n    set {windowX, windowY} to position of targetWindow\n    set {windowWidth, windowHeight} to size of targetWindow\n  end tell\n  set clickX to windowX + (windowWidth div 2)\n  set clickY to windowY + windowHeight - 96\n  click at {clickX, clickY}\nend tell",
-            "description": "Focus the Codex chat box"
+            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\n  delay 0.05\n  key code 0 using {command down}\n  delay 0.02\n  key code 51\nend tell",
+            "description": "Clear the Codex chat box"
           }
         }
       }

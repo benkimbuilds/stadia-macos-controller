@@ -116,7 +116,8 @@ Codex profile defaults:
 - App profile: `com.openai.codex` -> `codex`
 - `L2`: hold `Cmd-Shift`, send `[`, then release to move to the previous Codex chat thread
 - `R2`: hold `Cmd-Shift`, send `]`, then release to move to the next Codex chat thread
-- `Y`: click into the lower center of the active Codex window to focus the chat box
+- `X`: click into the lower center of the active Codex window to focus the chat box
+- `Y`: focus the Codex chat box, select all draft text, and delete it
 
 If your Ghostty split binding differs, edit `config/mappings.json`.
 For design intent behind the current layout, see `docs/references/ghostty-mapping-rationale.md`.
