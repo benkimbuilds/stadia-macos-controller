@@ -112,6 +112,12 @@ Slack profile defaults:
 - `X` opens or replies in the thread for the focused Slack message.
 - `Y` clears the Slack thread reply draft and returns focus to the main conversation.
 
+Codex profile defaults:
+- App profile: `com.openai.codex` -> `codex`
+- `L2`: hold `Cmd-Shift`, send `[`, then release to move to the previous Codex chat thread
+- `R2`: hold `Cmd-Shift`, send `]`, then release to move to the next Codex chat thread
+- `Y`: click into the lower center of the active Codex window to focus the chat box
+
 If your Ghostty split binding differs, edit `config/mappings.json`.
 For design intent behind the current layout, see `docs/references/ghostty-mapping-rationale.md`.
 If Ghostty AppleScript is disabled or you are on Ghostty older than `1.3.0`, the `share` mapping must be changed back to a plain keystroke or another supported action type.

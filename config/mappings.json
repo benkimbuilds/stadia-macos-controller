@@ -1,6 +1,7 @@
 {
   "appProfiles": {
     "company.thebrowser.Browser": "arc",
+    "com.openai.codex": "codex",
     "com.mitchellh.ghostty": "ghostty",
     "com.tinyspeck.slackmacgap": "slack",
     "net.whatsapp.WhatsApp": "whatsapp"
@@ -603,6 +604,38 @@
             "postModifiers": [],
             "postDelayMs": 80,
             "description": "Clear the Slack thread reply draft and return focus to the main conversation"
+          }
+        }
+      }
+    },
+    "codex": {
+      "enabled": true,
+      "mappings": {
+        "leftTrigger": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "applescript",
+            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  key down command\n  key down shift\n  key code 33\n  key up shift\n  key up command\nend tell",
+            "description": "Move to the previous Codex chat thread"
+          }
+        },
+        "rightTrigger": {
+          "debounceMs": 180,
+          "edgeTrigger": true,
+          "action": {
+            "type": "applescript",
+            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  key down command\n  key down shift\n  key code 30\n  key up shift\n  key up command\nend tell",
+            "description": "Move to the next Codex chat thread"
+          }
+        },
+        "y": {
+          "debounceMs": 220,
+          "edgeTrigger": true,
+          "action": {
+            "type": "applescript",
+            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    if (count of windows) is 0 then error \"No Codex window found\"\n    set targetWindow to missing value\n    repeat with candidateWindow in windows\n      try\n        if description of candidateWindow is \"standard window\" then\n          set targetWindow to candidateWindow\n          exit repeat\n        end if\n      end try\n    end repeat\n    if targetWindow is missing value then set targetWindow to window 1\n    set {windowX, windowY} to position of targetWindow\n    set {windowWidth, windowHeight} to size of targetWindow\n  end tell\n  set clickX to windowX + (windowWidth div 2)\n  set clickY to windowY + windowHeight - 96\n  click at {clickX, clickY}\nend tell",
+            "description": "Focus the Codex chat box"
           }
         }
       }
