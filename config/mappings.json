@@ -2,6 +2,7 @@
   "appProfiles": {
     "company.thebrowser.Browser": "arc",
     "com.openai.codex": "codex",
+    "com.todesktop.230313mzl4w4u92": "cursor",
     "com.mitchellh.ghostty": "ghostty",
     "com.tinyspeck.slackmacgap": "slack",
     "net.whatsapp.WhatsApp": "whatsapp"
@@ -603,8 +604,8 @@
           "debounceMs": 220,
           "edgeTrigger": true,
           "action": {
-            "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\nend tell",
+            "type": "focusTextArea",
+            "bundleID": "com.openai.codex",
             "description": "Focus the Codex chat box"
           }
         },
@@ -612,9 +613,32 @@
           "debounceMs": 220,
           "edgeTrigger": true,
           "action": {
-            "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\n  delay 0.05\n  key code 0 using {command down}\n  delay 0.02\n  key code 51\nend tell",
+            "type": "clearTextArea",
+            "bundleID": "com.openai.codex",
             "description": "Clear the Codex chat box"
+          }
+        }
+      }
+    },
+    "cursor": {
+      "enabled": true,
+      "mappings": {
+        "x": {
+          "debounceMs": 220,
+          "edgeTrigger": true,
+          "action": {
+            "type": "focusTextArea",
+            "bundleID": "com.todesktop.230313mzl4w4u92",
+            "description": "Focus the Cursor agent composer"
+          }
+        },
+        "y": {
+          "debounceMs": 220,
+          "edgeTrigger": true,
+          "action": {
+            "type": "clearTextArea",
+            "bundleID": "com.todesktop.230313mzl4w4u92",
+            "description": "Clear the Cursor agent composer"
           }
         }
       }

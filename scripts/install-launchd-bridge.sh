@@ -73,6 +73,8 @@ write_info_plist() {
     <string>${APP_EXECUTABLE_NAME}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>LSUIElement</key>
+    <true/>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>CFBundleVersion</key>

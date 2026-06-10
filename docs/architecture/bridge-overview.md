@@ -58,6 +58,10 @@ flowchart TD
   - generic macOS key injection; held keys synthesize repeat events while held so terminal apps see closer-to-real key hold behavior, and single keystrokes can optionally chain a delayed follow-up keystroke
 - `focusApp`
   - activates a specific running app and clicks its active window to pull focus onto that display
+- `focusTextArea`
+  - activates a specific running app and focuses the best accessible text area in its current window
+- `clearTextArea`
+  - activates a specific running app, focuses its best accessible text area, then selects and deletes the current draft
 - `focusDisplay`
   - moves the cursor to the adjacent display center without forcing a specific app
 - `ghosttyAction`

@@ -116,8 +116,13 @@ Codex profile defaults:
 - App profile: `com.openai.codex` -> `codex`
 - `L2`: hold `Cmd-Shift`, send `[`, then release to move to the previous Codex chat thread
 - `R2`: hold `Cmd-Shift`, send `]`, then release to move to the next Codex chat thread
-- `X`: click into the lower center of the active Codex window to focus the chat box
-- `Y`: focus the Codex chat box, select all draft text, and delete it
+- `X`: focus the Codex chat box
+- `Y`: clear the Codex chat box
+
+Cursor profile defaults:
+- App profile: `com.todesktop.230313mzl4w4u92` -> `cursor`
+- `X`: focus the Cursor agent composer
+- `Y`: clear the Cursor agent composer
 
 If your Ghostty split binding differs, edit `config/mappings.json`.
 For design intent behind the current layout, see `docs/references/ghostty-mapping-rationale.md`.

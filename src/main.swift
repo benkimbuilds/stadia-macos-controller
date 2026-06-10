@@ -179,6 +179,8 @@ enum ActionType: String, Decodable {
     case keystroke
     case holdKeystroke
     case focusApp
+    case focusTextArea
+    case clearTextArea
     case focusDisplay
     case shell
     case applescript
@@ -379,6 +381,14 @@ struct ConfigLoader {
         case .focusApp:
             guard let bundleID = action.bundleID, !bundleID.isEmpty else {
                 throw BridgeError.configValidationFailed("\(context) focusApp action requires bundleID")
+            }
+        case .focusTextArea:
+            guard let bundleID = action.bundleID, !bundleID.isEmpty else {
+                throw BridgeError.configValidationFailed("\(context) focusTextArea action requires bundleID")
+            }
+        case .clearTextArea:
+            guard let bundleID = action.bundleID, !bundleID.isEmpty else {
+                throw BridgeError.configValidationFailed("\(context) clearTextArea action requires bundleID")
             }
         case .focusDisplay:
             guard let direction = action.direction?.lowercased(),
@@ -592,6 +602,22 @@ final class ActionExecutor {
 
             try focusApplication(bundleID: bundleID, profile: profile, source: button)
             print("[ACTION] focus-app bundleID=\(bundleID) profile=\(profile) button=\(button)")
+
+        case .focusTextArea:
+            guard let bundleID = action.bundleID else {
+                throw BridgeError.actionExecutionFailed("focusTextArea action missing bundleID")
+            }
+
+            try focusTextArea(bundleID: bundleID, profile: profile, source: button)
+            print("[ACTION] focus-text-area bundleID=\(bundleID) profile=\(profile) button=\(button)")
+
+        case .clearTextArea:
+            guard let bundleID = action.bundleID else {
+                throw BridgeError.actionExecutionFailed("clearTextArea action missing bundleID")
+            }
+
+            try clearTextArea(bundleID: bundleID, profile: profile, source: button)
+            print("[ACTION] clear-text-area bundleID=\(bundleID) profile=\(profile) button=\(button)")
 
         case .focusDisplay:
             guard let direction = action.direction else {
@@ -942,6 +968,68 @@ final class ActionExecutor {
         throw lastError ?? BridgeError.actionExecutionFailed("Failed to focus app window: \(bundleID)")
     }
 
+    func focusTextArea(bundleID: String, profile: String, source: String) throws {
+        if dryRun {
+            print("[DRY-RUN] focus-text-area bundleID=\(bundleID) profile=\(profile) source=\(source)")
+            return
+        }
+
+        if !AXIsProcessTrusted() {
+            throw BridgeError.actionExecutionFailed("Accessibility permission is required for text-area focus")
+        }
+
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else {
+            throw BridgeError.actionExecutionFailed("Application is not running: \(bundleID)")
+        }
+
+        _ = app.activate()
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        var lastError: Error?
+        for _ in 0..<10 {
+            do {
+                let windowElement = try focusedOrMainWindow(for: appElement)
+                guard let textArea = bestTextArea(in: windowElement) else {
+                    throw BridgeError.actionExecutionFailed("No accessible text area found in app: \(bundleID)")
+                }
+
+                let result = AXUIElementSetAttributeValue(textArea, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+                guard result == .success else {
+                    throw BridgeError.actionExecutionFailed("Failed to focus text area in app: \(bundleID)")
+                }
+
+                if let textAreaFrame = frameOrNil(for: textArea) {
+                    let target = CGPoint(x: textAreaFrame.midX, y: textAreaFrame.midY)
+                    try clickMouse(at: target, button: .left, profile: profile, source: source)
+                }
+                return
+            } catch {
+                lastError = error
+                Thread.sleep(forTimeInterval: 0.03)
+            }
+        }
+
+        throw lastError ?? BridgeError.actionExecutionFailed("Failed to focus text area in app: \(bundleID)")
+    }
+
+    func clearTextArea(bundleID: String, profile: String, source: String) throws {
+        if dryRun {
+            print("[DRY-RUN] clear-text-area bundleID=\(bundleID) profile=\(profile) source=\(source)")
+            return
+        }
+
+        try focusTextArea(bundleID: bundleID, profile: profile, source: source)
+
+        if !AXIsProcessTrusted() {
+            throw BridgeError.actionExecutionFailed("Accessibility permission is required for text-area clearing")
+        }
+
+        Thread.sleep(forTimeInterval: 0.04)
+        try postKeystroke(keyCode: 0, modifiers: [.maskCommand])
+        Thread.sleep(forTimeInterval: 0.02)
+        try postKeystroke(keyCode: 51, modifiers: [])
+    }
+
     private func raise(windowElement: AXUIElement) -> Bool {
         AXUIElementPerformAction(windowElement, kAXRaiseAction as CFString) == .success
     }
@@ -1123,10 +1211,64 @@ final class ActionExecutor {
         throw BridgeError.actionExecutionFailed("Frontmost app has no accessible focused or main window")
     }
 
-    private func frame(for windowElement: AXUIElement) throws -> CGRect {
-        guard let position = copyAXPoint(windowElement, attribute: kAXPositionAttribute as CFString),
-              let size = copyAXSize(windowElement, attribute: kAXSizeAttribute as CFString) else {
+    private func bestTextArea(in element: AXUIElement) -> AXUIElement? {
+        var candidates: [AXUIElement] = []
+        collectTextAreas(in: element, into: &candidates)
+        guard !candidates.isEmpty else {
+            return nil
+        }
+
+        return candidates.max(by: { textAreaScore($0) < textAreaScore($1) })
+    }
+
+    private func collectTextAreas(in element: AXUIElement, into candidates: inout [AXUIElement]) {
+        if copyAXString(element, attribute: kAXRoleAttribute as CFString) == kAXTextAreaRole as String {
+            candidates.append(element)
+        }
+
+        for child in copyAXElements(element, attribute: kAXChildrenAttribute as CFString) {
+            collectTextAreas(in: child, into: &candidates)
+        }
+    }
+
+    private func textAreaScore(_ element: AXUIElement) -> Int {
+        let description = (copyAXString(element, attribute: kAXDescriptionAttribute as CFString) ?? "").lowercased()
+        let value = copyAXString(element, attribute: kAXValueAttribute as CFString) ?? ""
+        let frame = CGRect(
+            origin: copyAXPoint(element, attribute: kAXPositionAttribute as CFString) ?? .zero,
+            size: copyAXSize(element, attribute: kAXSizeAttribute as CFString) ?? .zero
+        )
+
+        var score = 0
+        if !description.contains("not accessible") {
+            score += 10_000
+        }
+        if frame.width >= 120 {
+            score += 2_000
+        }
+        if frame.height >= 18 {
+            score += 1_000
+        }
+        if !value.isEmpty {
+            score += 400
+        }
+        score += min(Int(frame.maxY), 4_000)
+        score += min(Int((frame.width * frame.height) / 50.0), 2_000)
+        return score
+    }
+
+    private func frame(for element: AXUIElement) throws -> CGRect {
+        guard let frame = frameOrNil(for: element) else {
             throw BridgeError.actionExecutionFailed("Failed to read frontmost window frame")
+        }
+
+        return frame
+    }
+
+    private func frameOrNil(for element: AXUIElement) -> CGRect? {
+        guard let position = copyAXPoint(element, attribute: kAXPositionAttribute as CFString),
+              let size = copyAXSize(element, attribute: kAXSizeAttribute as CFString) else {
+            return nil
         }
 
         return CGRect(origin: position, size: size)
@@ -1139,6 +1281,31 @@ final class ActionExecutor {
             return nil
         }
         return (value as! AXUIElement)
+    }
+
+    private func copyAXElements(_ element: AXUIElement, attribute: CFString) -> [AXUIElement] {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success,
+              let value,
+              CFGetTypeID(value) == CFArrayGetTypeID(),
+              let elements = value as? [AXUIElement] else {
+            return []
+        }
+
+        return elements
+    }
+
+    private func copyAXString(_ element: AXUIElement, attribute: CFString) -> String? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success,
+              let value,
+              CFGetTypeID(value) == CFStringGetTypeID() else {
+            return nil
+        }
+
+        return value as? String
     }
 
     private func copyAXPoint(_ element: AXUIElement, attribute: CFString) -> CGPoint? {
@@ -2555,6 +2722,9 @@ final class StatusItemController: NSObject {
         if let button = statusItem.button {
             button.title = "SC"
             button.toolTip = "Stadia Controller Bridge"
+            print("[STATUS] status item button created")
+        } else {
+            print("[STATUS] status item button unavailable")
         }
 
         controllersItem.isEnabled = false
@@ -2644,7 +2814,22 @@ final class StatusItemController: NSObject {
 @MainActor
 final class RuntimeState {
     static let shared = RuntimeState()
+    var appDelegate: AppDelegate?
     var statusItemController: StatusItemController?
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let bridge: ControllerBridge
+
+    init(bridge: ControllerBridge) {
+        self.bridge = bridge
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        RuntimeState.shared.statusItemController = StatusItemController(bridge: bridge)
+        bridge.start()
+    }
 }
 
 @MainActor
@@ -2663,8 +2848,10 @@ func run() throws {
         promptAccessibility: options.promptAccessibility,
         diagnoseController: options.diagnoseController
     )
-    RuntimeState.shared.statusItemController = StatusItemController(bridge: bridge)
-    bridge.start()
+    let delegate = AppDelegate(bridge: bridge)
+    RuntimeState.shared.appDelegate = delegate
+    RuntimeState.shared.statusItemController = nil
+    app.delegate = delegate
     app.run()
 }
 
