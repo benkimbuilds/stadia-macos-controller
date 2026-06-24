@@ -74,13 +74,14 @@ Behavior note:
 - `action` (`ActionConfig`): action to execute.
 
 ## ActionConfig
-- `type` (`"keystroke" | "holdKeystroke" | "focusApp" | "focusDisplay" | "shell" | "applescript" | "ghosttyAction" | "text" | "mouseClick"`)
+- `type` (`"keystroke" | "holdKeystroke" | "focusApp" | "focusDisplay" | "shell" | "applescript" | "ghosttyAction" | "text" | "mouseClick" | "windowClick"`)
 - Keystroke fields:
   - `keyCode` (`int`, required)
   - `modifiers` (`string[]`, optional)
   - `postKeyCode` (`int`, optional): second keystroke to send after the main keystroke.
   - `postModifiers` (`string[]`, optional): modifiers for `postKeyCode`.
   - `postDelayMs` (`int`, optional): delay after the main keystroke and before `postKeyCode`.
+  - `preWindowPoint` (`WindowPointConfig`, optional): click a relative point inside a window before sending the keystroke.
 - Hold keystroke fields:
   - `keyCode` (`int`, required)
   - `modifiers` (`string[]`, optional)
@@ -104,8 +105,15 @@ Behavior note:
   - `delayMs` (`int`, optional): delay between typing text and Enter.
 - Mouse click fields:
   - `mouseButton` (`"left" | "right" | "center"`, optional, default `"left"`)
+- Window click fields:
+  - `windowPoint` (`WindowPointConfig`, required): click a relative point inside a window.
 - Optional shared field:
   - `description` (`string`)
+
+## WindowPointConfig
+- `xFraction` (`double`, required): horizontal click position inside the window from `0.0` (left edge) to `1.0` (right edge).
+- `yFraction` (`double`, required): vertical click position inside the window from `0.0` (top edge) to `1.0` (bottom edge).
+- `bundleID` (`string`, optional): app bundle ID whose focused or main window should be clicked. If omitted, the frontmost app window is used.
 
 ## SafetyConfig
 - `dryRun` (`bool`): if true, print actions without executing.

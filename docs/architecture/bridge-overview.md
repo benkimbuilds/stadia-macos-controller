@@ -64,7 +64,7 @@ flowchart TD
   - Ghostty-native terminal action such as `next_tab`, `goto_split:next`, or `close_surface`
 - `applescript`
   - richer Ghostty control for cases where a plain action is not enough, such as opening a new tab with custom startup behavior
-- `text`, `shell`, `mouseClick`
+- `text`, `shell`, `mouseClick`, `windowClick`
   - utility paths for Codex-specific prompts and a few non-terminal actions
 
 ## Boundaries

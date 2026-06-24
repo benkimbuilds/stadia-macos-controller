@@ -603,8 +603,12 @@
           "debounceMs": 220,
           "edgeTrigger": true,
           "action": {
-            "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\nend tell",
+            "type": "windowClick",
+            "windowPoint": {
+              "bundleID": "com.openai.codex",
+              "xFraction": 0.5,
+              "yFraction": 0.94
+            },
             "description": "Focus the Codex chat box"
           }
         },
@@ -612,8 +616,19 @@
           "debounceMs": 220,
           "edgeTrigger": true,
           "action": {
-            "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\n  delay 0.05\n  key code 0 using {command down}\n  delay 0.02\n  key code 51\nend tell",
+            "type": "keystroke",
+            "preWindowPoint": {
+              "bundleID": "com.openai.codex",
+              "xFraction": 0.5,
+              "yFraction": 0.94
+            },
+            "preKeyCode": 0,
+            "preModifiers": [
+              "command"
+            ],
+            "preDelayMs": 40,
+            "keyCode": 51,
+            "modifiers": [],
             "description": "Clear the Codex chat box"
           }
         }

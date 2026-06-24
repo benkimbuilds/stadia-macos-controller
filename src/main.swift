@@ -153,6 +153,12 @@ struct SafetyConfig: Decodable {
     let emergencyToggleButton: String?
 }
 
+struct WindowPointConfig: Decodable {
+    let xFraction: Double
+    let yFraction: Double
+    let bundleID: String?
+}
+
 struct ActionConfig: Decodable {
     let type: ActionType
     let keyCode: Int?
@@ -172,6 +178,8 @@ struct ActionConfig: Decodable {
     let preKeyCode: Int?
     let preModifiers: [String]?
     let preDelayMs: Int?
+    let windowPoint: WindowPointConfig?
+    let preWindowPoint: WindowPointConfig?
     let description: String?
 }
 
@@ -185,6 +193,7 @@ enum ActionType: String, Decodable {
     case ghosttyAction
     case text
     case mouseClick
+    case windowClick
 }
 
 struct ControllerEvent {
@@ -364,6 +373,8 @@ struct ConfigLoader {
     }
 
     private static func validateAction(_ action: ActionConfig, context: String) throws {
+        try validateWindowPoint(action.preWindowPoint, context: context, fieldName: "preWindowPoint")
+
         switch action.type {
         case .keystroke:
             guard action.keyCode != nil else {
@@ -408,6 +419,29 @@ struct ConfigLoader {
                     throw BridgeError.configValidationFailed("\(context) mouseClick action mouseButton must be left, right, or center")
                 }
             }
+        case .windowClick:
+            guard action.windowPoint != nil else {
+                throw BridgeError.configValidationFailed("\(context) windowClick action requires windowPoint")
+            }
+            try validateWindowPoint(action.windowPoint, context: context, fieldName: "windowPoint")
+        }
+    }
+
+    private static func validateWindowPoint(
+        _ windowPoint: WindowPointConfig?,
+        context: String,
+        fieldName: String
+    ) throws {
+        guard let windowPoint else {
+            return
+        }
+
+        if !(0...1).contains(windowPoint.xFraction) {
+            throw BridgeError.configValidationFailed("\(context) \(fieldName).xFraction must be between 0 and 1")
+        }
+
+        if !(0...1).contains(windowPoint.yFraction) {
+            throw BridgeError.configValidationFailed("\(context) \(fieldName).yFraction must be between 0 and 1")
         }
     }
 
@@ -553,6 +587,11 @@ final class ActionExecutor {
 
         switch action.type {
         case .keystroke:
+            if let preWindowPoint = action.preWindowPoint {
+                try clickWindowPoint(preWindowPoint, profile: profile, source: button)
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+
             guard let keyCodeValue = action.keyCode else {
                 throw BridgeError.actionExecutionFailed("Keystroke action missing keyCode")
             }
@@ -630,6 +669,11 @@ final class ActionExecutor {
                 throw BridgeError.actionExecutionFailed("Text action missing text")
             }
 
+            if let preWindowPoint = action.preWindowPoint {
+                try clickWindowPoint(preWindowPoint, profile: profile, source: button)
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+
             if !AXIsProcessTrusted() {
                 throw BridgeError.actionExecutionFailed("Accessibility permission is required for typed text injection")
             }
@@ -661,6 +705,13 @@ final class ActionExecutor {
                 profile: profile,
                 source: button
             )
+
+        case .windowClick:
+            guard let windowPoint = action.windowPoint else {
+                throw BridgeError.actionExecutionFailed("windowClick action missing windowPoint")
+            }
+
+            try clickWindowPoint(windowPoint, profile: profile, source: button)
         }
     }
 
@@ -1215,6 +1266,50 @@ final class ActionExecutor {
 
         mouseDown.post(tap: .cghidEventTap)
         mouseUp.post(tap: .cghidEventTap)
+    }
+
+    private func clickWindowPoint(_ windowPoint: WindowPointConfig, profile: String, source: String) throws {
+        if dryRun {
+            let targetBundle = windowPoint.bundleID ?? currentFrontmostBundleID() ?? "frontmost-app"
+            print(
+                "[DRY-RUN] window-click profile=\(profile) source=\(source) bundle=\(targetBundle) " +
+                "xFraction=\(windowPoint.xFraction) yFraction=\(windowPoint.yFraction)"
+            )
+            return
+        }
+
+        if !AXIsProcessTrusted() {
+            throw BridgeError.actionExecutionFailed("Accessibility permission is required for window click injection")
+        }
+
+        let app: NSRunningApplication
+        if let bundleID = windowPoint.bundleID {
+            guard let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else {
+                throw BridgeError.actionExecutionFailed("Application is not running: \(bundleID)")
+            }
+            app = running
+            _ = app.activate()
+            Thread.sleep(forTimeInterval: 0.03)
+        } else if let frontmost = NSWorkspace.shared.frontmostApplication {
+            app = frontmost
+        } else {
+            throw BridgeError.actionExecutionFailed("No frontmost application found for window click")
+        }
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        let windowElement = try focusedOrMainWindow(for: appElement)
+        let windowFrame = try frame(for: windowElement)
+        let target = CGPoint(
+            x: windowFrame.minX + (windowFrame.width * CGFloat(windowPoint.xFraction)),
+            y: windowFrame.minY + (windowFrame.height * CGFloat(windowPoint.yFraction))
+        )
+
+        try clickMouse(at: target, button: .left, profile: profile, source: source)
+        let targetBundleID = app.bundleIdentifier ?? "unknown"
+        print(
+            "[ACTION] window-click profile=\(profile) source=\(source) bundle=\(targetBundleID) " +
+            "point=(\(Int(target.x)),\(Int(target.y)))"
+        )
     }
 
     private func movePointerAbsolute(to location: CGPoint, profile: String, source: String) throws {
