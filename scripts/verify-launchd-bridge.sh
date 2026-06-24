@@ -7,6 +7,8 @@ DOMAIN="gui/$(id -u)"
 RUNTIME_DIR="${HOME}/Library/Application Support/stadia-controller-bridge"
 APP_BUNDLE_NAME="StadiaControllerBridge.app"
 APP_EXECUTABLE_NAME="stadia-controller-bridge"
+LAUNCHER_APPS_DIR="${HOME}/Applications"
+LAUNCHER_APP_NAME="Stadia Controller Bridge.app"
 EXPECTED_SIGNING_IDENTIFIER="com.stadia-controller-bridge"
 TAIL_LINES=120
 
@@ -14,6 +16,7 @@ OUT_LOG="${HOME}/Library/Logs/stadia-controller-bridge.launchd.out.log"
 ERR_LOG="${HOME}/Library/Logs/stadia-controller-bridge.launchd.err.log"
 EXPECTED_APP_BUNDLE="${RUNTIME_DIR}/${APP_BUNDLE_NAME}"
 EXPECTED_PROGRAM="${EXPECTED_APP_BUNDLE}/Contents/MacOS/${APP_EXECUTABLE_NAME}"
+EXPECTED_LAUNCHER_APP="${LAUNCHER_APPS_DIR}/${LAUNCHER_APP_NAME}"
 
 usage() {
   cat <<USAGE
@@ -84,6 +87,7 @@ warn() {
 
 echo "Verifying label: ${LABEL}"
 echo "Expected program: ${EXPECTED_PROGRAM}"
+echo "Expected launcher: ${EXPECTED_LAUNCHER_APP}"
 
 if ! launch_output="$(launchctl print "${DOMAIN}/${LABEL}" 2>/dev/null)"; then
   fail "LaunchAgent is not loaded: ${DOMAIN}/${LABEL}"
@@ -128,6 +132,12 @@ if [[ -d "$EXPECTED_APP_BUNDLE" ]]; then
   fi
 else
   fail "Expected app bundle missing: ${EXPECTED_APP_BUNDLE}"
+fi
+
+if [[ -e "$EXPECTED_LAUNCHER_APP" ]]; then
+  note "Launcher app exists at ${EXPECTED_LAUNCHER_APP}"
+else
+  warn "Launcher app missing: ${EXPECTED_LAUNCHER_APP}"
 fi
 
 log_chunk=""

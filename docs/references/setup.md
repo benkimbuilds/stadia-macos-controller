@@ -59,6 +59,7 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
 - LaunchAgent label default: `com.stadia-controller-bridge`
 - Bundle identifier/signing identifier default: `com.stadia-controller-bridge`
 - Staged app bundle path: `~/Library/Application Support/stadia-controller-bridge/StadiaControllerBridge.app`
+- User-launchable app path: `~/Applications/Stadia Controller Bridge.app`
 
 ## Signing Modes (Installer)
 - `--sign-identity auto` (default): prefer Apple cert if available, fallback to ad-hoc.
@@ -158,6 +159,20 @@ Verify:
 ```bash
 cd ~/GitHub/scripts
 ./scripts/verify-launchd-bridge.sh
+```
+
+## Launch The App Manually
+
+After install, you can open the menu bar app directly from:
+
+- `~/Applications/Stadia Controller Bridge.app`
+
+This is the easiest recovery path if the bridge is down and you just want to start it again from Finder or Spotlight.
+
+From Terminal, the equivalent is:
+
+```bash
+open ~/Applications/Stadia\\ Controller\\ Bridge.app
 ```
 
 ## Troubleshooting (Recurring Issues)

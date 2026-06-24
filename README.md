@@ -45,6 +45,14 @@ Install the stable launchd service:
 ./scripts/install-launchd-bridge.sh --repo-dir "$PWD" --mode live
 ```
 
+That installer also creates a user-launchable menu bar app at:
+
+```text
+~/Applications/Stadia Controller Bridge.app
+```
+
+If the bridge is down, you can relaunch it from Finder or Spotlight by opening that app.
+
 Verify the live service:
 
 ```bash

@@ -1552,6 +1552,19 @@ final class ControllerBridge: NSObject {
         )
     }
 
+    func setBridgeEnabled(_ enabled: Bool) {
+        bridgeEnabled = enabled
+        print("[STATUS] bridgeEnabled=\(bridgeEnabled)")
+    }
+
+    func toggleBridgeEnabled() {
+        setBridgeEnabled(!bridgeEnabled)
+    }
+
+    var resolvedConfigPath: String {
+        configPath
+    }
+
     private static func effectiveDryRun(for config: BridgeConfig, dryRunOverride: Bool?) -> Bool {
         dryRunOverride ?? config.safety.dryRun
     }
@@ -2625,6 +2638,13 @@ final class StatusItemController: NSObject {
     private let profileItem = NSMenuItem(title: "Profile: none", action: nil, keyEquivalent: "")
     private let modeItem = NSMenuItem(title: "Mode: Live", action: nil, keyEquivalent: "")
     private let focusItem = NSMenuItem(title: "Frontmost: unknown", action: nil, keyEquivalent: "")
+    private let bridgeToggleItem = NSMenuItem(title: "Disable Input", action: nil, keyEquivalent: "")
+    private let restartItem = NSMenuItem(title: "Restart Bridge", action: nil, keyEquivalent: "r")
+    private let stopOrQuitItem = NSMenuItem(title: "Quit Bridge", action: nil, keyEquivalent: "q")
+    private let openMappingsItem = NSMenuItem(title: "Open Mappings", action: nil, keyEquivalent: "")
+    private let openLogsItem = NSMenuItem(title: "Open Logs", action: nil, keyEquivalent: "")
+    private let accessibilityItem = NSMenuItem(title: "Accessibility Settings", action: nil, keyEquivalent: "")
+    private let revealLauncherItem = NSMenuItem(title: "Show App in Finder", action: nil, keyEquivalent: "")
     private var refreshTimer: Timer?
     private let restartMode: RestartMode
 
@@ -2662,14 +2682,34 @@ final class StatusItemController: NSObject {
         statusMenu.addItem(modeItem)
         statusMenu.addItem(focusItem)
         statusMenu.addItem(.separator())
+        bridgeToggleItem.target = self
+        bridgeToggleItem.action = #selector(toggleBridge(_:))
+        statusMenu.addItem(bridgeToggleItem)
 
-        let restartItem = NSMenuItem(title: "Restart Bridge", action: #selector(restartBridge(_:)), keyEquivalent: "r")
         restartItem.target = self
+        restartItem.action = #selector(restartBridge(_:))
         statusMenu.addItem(restartItem)
 
-        let quitItem = NSMenuItem(title: "Quit Bridge", action: #selector(quitBridge(_:)), keyEquivalent: "q")
-        quitItem.target = self
-        statusMenu.addItem(quitItem)
+        stopOrQuitItem.target = self
+        stopOrQuitItem.action = #selector(stopOrQuitBridge(_:))
+        statusMenu.addItem(stopOrQuitItem)
+        statusMenu.addItem(.separator())
+
+        openMappingsItem.target = self
+        openMappingsItem.action = #selector(openMappings(_:))
+        statusMenu.addItem(openMappingsItem)
+
+        openLogsItem.target = self
+        openLogsItem.action = #selector(openLogs(_:))
+        statusMenu.addItem(openLogsItem)
+
+        accessibilityItem.target = self
+        accessibilityItem.action = #selector(openAccessibilitySettings(_:))
+        statusMenu.addItem(accessibilityItem)
+
+        revealLauncherItem.target = self
+        revealLauncherItem.action = #selector(revealLauncher(_:))
+        statusMenu.addItem(revealLauncherItem)
 
         statusItem.menu = statusMenu
     }
@@ -2681,6 +2721,8 @@ final class StatusItemController: NSObject {
         profileItem.title = "Profile: \(snapshot.activeProfileName ?? "none")"
         modeItem.title = "Mode: \(snapshot.dryRun ? "Dry-run" : "Live") | Bridge: \(snapshot.bridgeEnabled ? "On" : "Off")"
         focusItem.title = "Frontmost: \(snapshot.frontmostBundleID ?? "unknown")"
+        bridgeToggleItem.title = snapshot.bridgeEnabled ? "Disable Input" : "Enable Input"
+        stopOrQuitItem.title = isLaunchdManaged ? "Stop Bridge" : "Quit Bridge"
 
         if let button = statusItem.button {
             button.title = snapshot.controllerCount > 0 ? "SC\(snapshot.dryRun ? "*" : "")" : "SC?"
@@ -2688,8 +2730,9 @@ final class StatusItemController: NSObject {
     }
 
     @objc
-    private func quitBridge(_ sender: Any?) {
-        NSApp.terminate(nil)
+    private func toggleBridge(_ sender: Any?) {
+        bridge.toggleBridgeEnabled()
+        refresh(nil)
     }
 
     @objc
@@ -2723,6 +2766,72 @@ final class StatusItemController: NSObject {
         }
     }
 
+    @objc
+    private func stopOrQuitBridge(_ sender: Any?) {
+        do {
+            switch restartMode {
+            case .launchd(let label, let domain):
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+                process.arguments = ["bootout", "\(domain)/\(label)"]
+                try process.run()
+                process.waitUntilExit()
+
+                guard process.terminationStatus == 0 else {
+                    throw BridgeError.actionExecutionFailed("launchctl stop failed with status \(process.terminationStatus)")
+                }
+
+                NSApp.terminate(nil)
+
+            case .manual:
+                NSApp.terminate(nil)
+            }
+        } catch {
+            NSSound.beep()
+            print("[ERROR] stop failed: \(error.localizedDescription)")
+        }
+    }
+
+    @objc
+    private func openMappings(_ sender: Any?) {
+        NSWorkspace.shared.open(URL(fileURLWithPath: bridge.resolvedConfigPath))
+    }
+
+    @objc
+    private func openLogs(_ sender: Any?) {
+        let logsDirectory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Logs", isDirectory: true)
+        NSWorkspace.shared.open(logsDirectory)
+    }
+
+    @objc
+    private func openAccessibilitySettings(_ sender: Any?) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        } else {
+            NSSound.beep()
+        }
+    }
+
+    @objc
+    private func revealLauncher(_ sender: Any?) {
+        let launcherURL = StatusItemController.launcherAppURL()
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: launcherURL.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([launcherURL])
+            return
+        }
+
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    }
+
+    private var isLaunchdManaged: Bool {
+        if case .launchd = restartMode {
+            return true
+        }
+        return false
+    }
+
     private static func detectRestartMode() -> RestartMode {
         let environment = ProcessInfo.processInfo.environment
         if let label = environment["XPC_SERVICE_NAME"], !label.isEmpty {
@@ -2733,6 +2842,12 @@ final class StatusItemController: NSObject {
         let arguments = Array(CommandLine.arguments.dropFirst())
         let workingDirectory = FileManager.default.currentDirectoryPath
         return .manual(executablePath: executablePath, arguments: arguments, workingDirectory: workingDirectory)
+    }
+
+    private static func launcherAppURL() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Applications", isDirectory: true)
+            .appendingPathComponent("Stadia Controller Bridge.app", isDirectory: true)
     }
 }
 

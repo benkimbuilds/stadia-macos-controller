@@ -13,6 +13,8 @@ BUILD_CONFIG="release" # release|debug
 RUNTIME_DIR="${HOME}/Library/Application Support/stadia-controller-bridge"
 APP_BUNDLE_NAME="StadiaControllerBridge.app"
 APP_EXECUTABLE_NAME="stadia-controller-bridge"
+LAUNCHER_APPS_DIR="${HOME}/Applications"
+LAUNCHER_APP_NAME="Stadia Controller Bridge.app"
 SIGN_IDENTITY="auto"   # auto|adhoc|none|<identity string>
 SIGNING_IDENTIFIER="com.stadia-controller-bridge"
 FORCE_BUILD=0
@@ -64,15 +66,17 @@ write_info_plist() {
 <plist version="1.0">
   <dict>
     <key>CFBundleName</key>
-    <string>StadiaControllerBridge</string>
+    <string>Stadia Controller Bridge</string>
     <key>CFBundleDisplayName</key>
-    <string>StadiaControllerBridge</string>
+    <string>Stadia Controller Bridge</string>
     <key>CFBundleIdentifier</key>
     <string>${SIGNING_IDENTIFIER}</string>
     <key>CFBundleExecutable</key>
     <string>${APP_EXECUTABLE_NAME}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>LSUIElement</key>
+    <true/>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>CFBundleVersion</key>
@@ -175,6 +179,7 @@ STAGED_CONTENTS_DIR="${STAGED_APP_BUNDLE}/Contents"
 STAGED_MACOS_DIR="${STAGED_CONTENTS_DIR}/MacOS"
 STAGED_BINARY="${STAGED_MACOS_DIR}/${APP_EXECUTABLE_NAME}"
 STAGED_INFO_PLIST="${STAGED_CONTENTS_DIR}/Info.plist"
+LAUNCHER_APP_PATH="${LAUNCHER_APPS_DIR}/${LAUNCHER_APP_NAME}"
 SKIP_SIGN=0
 SIGN_TARGET=""
 
@@ -285,6 +290,7 @@ fi
 
 mkdir -p "$(dirname "$PLIST_PATH")"
 mkdir -p "$(dirname "$OUT_LOG")"
+mkdir -p "$LAUNCHER_APPS_DIR"
 
 mode_args="--no-dry-run"
 if [[ "$MODE" == "dry-run" ]]; then
@@ -366,12 +372,16 @@ launchctl bootout "$DOMAIN" "$PLIST_PATH" >/dev/null 2>&1 || true
 launchctl bootstrap "$DOMAIN" "$PLIST_PATH"
 launchctl kickstart -k "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
 
+rm -f "$LAUNCHER_APP_PATH"
+ln -s "$STAGED_APP_BUNDLE" "$LAUNCHER_APP_PATH"
+
 echo "Loaded $LABEL from $PLIST_PATH"
 echo "Mode: $MODE"
 echo "Executable: $BINARY_PATH"
 if [[ -d "$SIGN_TARGET" ]]; then
   echo "App bundle: $SIGN_TARGET"
 fi
+echo "Launcher app: $LAUNCHER_APP_PATH"
 if [[ -n "${SELECTED_IDENTITY}" ]]; then
   echo "Code signature:"
   /usr/bin/codesign -dv --verbose=2 "$SIGN_TARGET" 2>&1 | sed -n '1,14p'

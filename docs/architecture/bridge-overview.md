@@ -72,6 +72,7 @@ flowchart TD
 - The bridge repo owns controller mapping, profile resolution, action dispatch, and config validation.
 - Ghostty owns terminal/tab/split semantics.
 - Machine-level install and launchd wiring live in `~/GitHub/scripts/setup/stadia/`.
+- The bridge process itself is a menu bar app and can also be launched directly from `~/Applications/Stadia Controller Bridge.app`.
 - Codex shell behavior and the directory picker live in `~/.agents/codex/`.
 
 ## Notes

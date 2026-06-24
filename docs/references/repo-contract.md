@@ -27,6 +27,7 @@ Use this page for repo-level commands, file map notes, and runtime contracts.
 - Canonical machine-level install and reconcile entrypoints live in `~/GitHub/scripts/setup/stadia/`.
 - Keep the launchd label stable as `com.stadia-controller-bridge`.
 - Keep the staged runtime target stable as `~/Library/Application Support/stadia-controller-bridge/StadiaControllerBridge.app`.
+- Keep the user-launchable app path stable as `~/Applications/Stadia Controller Bridge.app`.
 - Keep the signing or bundle identifier stable as `com.stadia-controller-bridge`.
 - Do not introduce per-machine launchd labels or staged runtime paths unless explicitly requested.
 - `config/mappings.json` hot-reloads while the bridge process is running.

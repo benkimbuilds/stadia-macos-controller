@@ -45,6 +45,7 @@ What this installer now does:
 - Reuses the staged runtime app bundle when source files are unchanged (avoids unnecessary re-sign/trust churn).
 - Builds a fresh binary (`release` by default) only when source changed or `--force-build` is used.
 - Stages it to a stable app bundle path: `~/Library/Application Support/stadia-controller-bridge/StadiaControllerBridge.app`.
+- Creates a visible launcher app symlink at `~/Applications/Stadia Controller Bridge.app`.
 - Uses one stable default LaunchAgent label on both machines: `com.stadia-controller-bridge`.
 - Uses one stable default signing/bundle identifier on both machines: `com.stadia-controller-bridge`.
 - Code-signs the staged app bundle target (`auto` by default with ad-hoc fallback).
