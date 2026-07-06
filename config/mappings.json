@@ -604,7 +604,7 @@
           "edgeTrigger": true,
           "action": {
             "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\nend tell",
+            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    if (count of windows) is 0 then return\n    set uiItems to entire contents of window 1\n    repeat with uiItem in uiItems\n      try\n        if role of uiItem is \"AXTextArea\" then\n          set value of attribute \"AXFocused\" of uiItem to true\n          return\n        end if\n      end try\n    end repeat\n  end tell\nend tell",
             "description": "Focus the Codex chat box"
           }
         },
@@ -613,7 +613,7 @@
           "edgeTrigger": true,
           "action": {
             "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    set targetArea to text area 1 of group 1 of group 2 of group 1 of group 2 of group 2 of group 2 of group 2 of group 2 of group 1 of group 2 of group 2 of group 1 of group 1 of group 1 of group 1 of UI element \"Codex\" of group 1 of group 1 of group 1 of group 1 of group 1 of group \"Codex\" of window \"Codex\"\n    set value of attribute \"AXFocused\" of targetArea to true\n  end tell\n  delay 0.05\n  key code 0 using {command down}\n  delay 0.02\n  key code 51\nend tell",
+            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    if (count of windows) is 0 then return\n    set uiItems to entire contents of window 1\n    repeat with uiItem in uiItems\n      try\n        if role of uiItem is \"AXTextArea\" then\n          set value of attribute \"AXFocused\" of uiItem to true\n          exit repeat\n        end if\n      end try\n    end repeat\n    delay 0.05\n    key code 0 using {command down}\n    delay 0.02\n    key code 51\n  end tell\nend tell",
             "description": "Clear the Codex chat box"
           }
         }

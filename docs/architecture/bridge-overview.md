@@ -1,6 +1,6 @@
 # Bridge Overview
 
-This repo is a small local input bridge. A compatible macOS `GameController` device is the input source, `ControllerBridge` owns runtime orchestration, `ProfileResolver` chooses the active app profile, and `ActionExecutor` dispatches the mapped action to Ghostty or macOS. A lightweight menu bar status item surfaces live bridge state such as connected controllers, current profile, and mode. The bridge does not try to be a full automation platform. It loads config, watches for changes, resolves the frontmost app, and executes the smallest thing needed.
+This repo is a small local input bridge. A compatible macOS `GameController` device is the input source, `ControllerBridge` owns runtime orchestration, `ProfileResolver` chooses the active app profile, and `ActionExecutor` dispatches the mapped action to Ghostty or macOS. A lightweight menu bar status item surfaces live bridge state such as connected controllers, current profile, and mode, and can pause or resume the bridge without quitting it. The bridge does not try to be a full automation platform. It loads config, watches for changes, resolves the frontmost app, and executes the smallest thing needed.
 
 ```mermaid
 flowchart TD
@@ -36,6 +36,7 @@ flowchart TD
 - `GameController` gives the raw controller buttons and stick values.
 - `ConfigLoader` validates `config/mappings.json` on startup and on hot reload before the runtime adopts new settings.
 - `ControllerBridge` polls inputs, tracks debounce and hold state, watches the config file, and coordinates profile resolution plus action dispatch.
+- The menu bar status item is a thin runtime control surface. It reflects current state and can pause the bridge, which immediately releases active hold actions and suppresses further controller-driven actions until resumed.
 - `ProfileResolver` maps the frontmost macOS bundle ID to one configured profile name.
 - `config/mappings.json` is the source of truth for app profiles, `alwaysOn` controls, button mappings, analog behavior, and safety defaults. Analog behavior can map either stick to scrolling, directional actions, or pointer movement on a per-profile basis.
 - `ActionExecutor` dispatches the chosen action through macOS input APIs, shell helpers, or Ghostty's AppleScript surface.
@@ -50,7 +51,7 @@ flowchart TD
 2. Start controller discovery, polling, and config-file watching.
 3. Detect button or stick changes and normalize them into runtime events.
 4. Resolve the frontmost app bundle ID and choose the matching profile, plus any explicit `alwaysOn` controls.
-5. Execute the mapped action through `ActionExecutor`.
+5. If the bridge is enabled, execute the mapped action through `ActionExecutor`.
 
 ## Action Types
 

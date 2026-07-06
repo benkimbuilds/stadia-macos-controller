@@ -1457,6 +1457,23 @@ final class ControllerBridge: NSObject {
         )
     }
 
+    func toggleBridgeEnabled(source: String) {
+        setBridgeEnabled(!bridgeEnabled, source: source)
+    }
+
+    func setBridgeEnabled(_ enabled: Bool, source: String) {
+        guard bridgeEnabled != enabled else {
+            return
+        }
+
+        bridgeEnabled = enabled
+        if !enabled {
+            clearActiveRuntimeStateForPause()
+        }
+
+        print("[SAFETY] bridgeEnabled=\(bridgeEnabled) source=\(source)")
+    }
+
     private static func effectiveDryRun(for config: BridgeConfig, dryRunOverride: Bool?) -> Bool {
         dryRunOverride ?? config.safety.dryRun
     }
@@ -1591,6 +1608,30 @@ final class ControllerBridge: NSObject {
             analogDirectionStates.removeAll()
         } catch {
             print("[CONFIG] Reload failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func clearActiveRuntimeStateForPause() {
+        releaseActiveHolds()
+        pendingComboButtons.removeAll()
+        consumedComboButtons.removeAll()
+        lastAnalogActionAt.removeAll()
+        lastAnalogScrollAt.removeAll()
+        analogDirectionStates.removeAll()
+        smoothedPointerValues.removeAll()
+    }
+
+    private func releaseActiveHolds() {
+        let holdsToRelease = activeHolds
+        activeHolds.removeAll()
+
+        for (stateKey, held) in holdsToRelease {
+            let button = stateKey.components(separatedBy: "::").last ?? stateKey
+            do {
+                try actionExecutor.endHold(action: held.action, profile: held.profileName, button: button)
+            } catch {
+                print("[ERROR] hold release failed during pause: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -2379,6 +2420,11 @@ final class ControllerBridge: NSObject {
     }
 
     private func executeButtonPress(event: ControllerEvent, activeProfileName: String?, bundleID: String) {
+        guard bridgeEnabled else {
+            print("[SKIP] Bridge disabled")
+            return
+        }
+
         guard let resolved = resolveMapping(forButton: event.button, activeProfileName: activeProfileName) else {
             if let activeProfileName {
                 print("[SKIP] no mapping profile=\(activeProfileName) bundle=\(bundleID) button=\(event.button)")
@@ -2468,8 +2514,7 @@ final class ControllerBridge: NSObject {
 
         if let emergencyButton = config.safety.emergencyToggleButton,
            event.button == emergencyButton {
-            bridgeEnabled.toggle()
-            print("[SAFETY] bridgeEnabled=\(bridgeEnabled)")
+            toggleBridgeEnabled(source: "emergencyButton:\(event.button)")
             return
         }
 
@@ -2530,6 +2575,7 @@ final class StatusItemController: NSObject {
     private let profileItem = NSMenuItem(title: "Profile: none", action: nil, keyEquivalent: "")
     private let modeItem = NSMenuItem(title: "Mode: Live", action: nil, keyEquivalent: "")
     private let focusItem = NSMenuItem(title: "Frontmost: unknown", action: nil, keyEquivalent: "")
+    private let pauseItem = NSMenuItem(title: "Pause Bridge", action: nil, keyEquivalent: "p")
     private var refreshTimer: Timer?
     private let restartMode: RestartMode
 
@@ -2568,6 +2614,10 @@ final class StatusItemController: NSObject {
         statusMenu.addItem(focusItem)
         statusMenu.addItem(.separator())
 
+        pauseItem.target = self
+        pauseItem.action = #selector(toggleBridgePaused(_:))
+        statusMenu.addItem(pauseItem)
+
         let restartItem = NSMenuItem(title: "Restart Bridge", action: #selector(restartBridge(_:)), keyEquivalent: "r")
         restartItem.target = self
         statusMenu.addItem(restartItem)
@@ -2586,10 +2636,25 @@ final class StatusItemController: NSObject {
         profileItem.title = "Profile: \(snapshot.activeProfileName ?? "none")"
         modeItem.title = "Mode: \(snapshot.dryRun ? "Dry-run" : "Live") | Bridge: \(snapshot.bridgeEnabled ? "On" : "Off")"
         focusItem.title = "Frontmost: \(snapshot.frontmostBundleID ?? "unknown")"
+        pauseItem.title = snapshot.bridgeEnabled ? "Pause Bridge" : "Resume Bridge"
 
         if let button = statusItem.button {
-            button.title = snapshot.controllerCount > 0 ? "SC\(snapshot.dryRun ? "*" : "")" : "SC?"
+            let suffix: String
+            if !snapshot.bridgeEnabled {
+                suffix = "!"
+            } else if snapshot.dryRun {
+                suffix = "*"
+            } else {
+                suffix = ""
+            }
+            button.title = snapshot.controllerCount > 0 ? "SC\(suffix)" : "SC?"
         }
+    }
+
+    @objc
+    private func toggleBridgePaused(_ sender: Any?) {
+        bridge.toggleBridgeEnabled(source: "statusItemMenu")
+        refresh(sender)
     }
 
     @objc

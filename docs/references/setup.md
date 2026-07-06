@@ -49,6 +49,12 @@ If Accessibility permission has not appeared yet, run once with prompt enabled:
 swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --prompt-accessibility
 ```
 
+## Pause From The Menu Bar
+- Use the `SC` menu bar item to pause the bridge when you want the controller disconnected from macOS actions without quitting the process.
+- Choose `Pause Bridge` to suppress controller-driven actions immediately.
+- Choose `Resume Bridge` to re-enable mappings.
+- Pausing releases active hold actions right away, so held modifiers or keys do not stay stuck after you switch into a game.
+
 ## Accessibility Permission (required for keystroke actions)
 1. Open `System Settings` > `Privacy & Security` > `Accessibility`.
 2. Allow this staged app executable:
@@ -116,8 +122,11 @@ Codex profile defaults:
 - App profile: `com.openai.codex` -> `codex`
 - `L2`: hold `Cmd-Shift`, send `[`, then release to move to the previous Codex chat thread
 - `R2`: hold `Cmd-Shift`, send `]`, then release to move to the next Codex chat thread
-- `X`: click into the lower center of the active Codex window to focus the chat box
+- `X`: focus the first accessible Codex text area in the active window
 - `Y`: focus the Codex chat box, select all draft text, and delete it
+
+Codex mapping note:
+- `X` and `Y` intentionally search the active Codex window for a text area at runtime instead of relying on a hardcoded Accessibility hierarchy path. That is more resilient to Codex UI layout changes.
 
 If your Ghostty split binding differs, edit `config/mappings.json`.
 For design intent behind the current layout, see `docs/references/ghostty-mapping-rationale.md`.
