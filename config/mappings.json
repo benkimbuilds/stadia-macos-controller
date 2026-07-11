@@ -19,7 +19,7 @@
       }
     },
     "mappings": {
-      "rightTrigger": {
+      "rightShoulder": {
         "debounceMs": 180,
         "edgeTrigger": true,
         "action": {
@@ -31,7 +31,7 @@
           "description": "Send Control-Tab"
         }
       },
-      "leftTrigger": {
+      "leftShoulder": {
         "debounceMs": 180,
         "edgeTrigger": true,
         "action": {
@@ -51,7 +51,7 @@
           "type": "keystroke",
           "keyCode": 48,
           "modifiers": [],
-          "description": "Send Tab (L2 + X behaves like Cmd+Tab)"
+          "description": "Send Tab"
         }
       },
       "a": {
@@ -128,7 +128,7 @@
           "description": "Send Command-V everywhere"
         }
       },
-      "leftShoulder": {
+      "leftTrigger": {
         "debounceMs": 180,
         "edgeTrigger": true,
         "action": {
@@ -141,7 +141,7 @@
           "description": "Move to the previous macOS space/display"
         }
       },
-      "rightShoulder": {
+      "rightTrigger": {
         "debounceMs": 180,
         "edgeTrigger": true,
         "action": {
@@ -181,7 +181,7 @@
         }
       },
       "mappings": {
-        "leftTrigger": {
+        "leftShoulder": {
           "debounceMs": 180,
           "edgeTrigger": true,
           "action": {
@@ -194,7 +194,7 @@
             "description": "Send Shift-Control-Tab"
           }
         },
-        "rightTrigger": {
+        "rightShoulder": {
           "debounceMs": 180,
           "edgeTrigger": true,
           "action": {
@@ -581,22 +581,22 @@
     "codex": {
       "enabled": true,
       "mappings": {
-        "leftTrigger": {
+        "leftShoulder": {
           "debounceMs": 180,
-          "edgeTrigger": true,
+          "edgeTrigger": false,
           "action": {
-            "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  key down command\n  key down shift\n  key code 33\n  key up shift\n  key up command\nend tell",
-            "description": "Move to the previous Codex chat thread"
+            "type": "codexSidebarNavigate",
+            "direction": "previous",
+            "description": "While held, open the previous task in visual project-sidebar order"
           }
         },
-        "rightTrigger": {
+        "rightShoulder": {
           "debounceMs": 180,
-          "edgeTrigger": true,
+          "edgeTrigger": false,
           "action": {
-            "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  key down command\n  key down shift\n  key code 30\n  key up shift\n  key up command\nend tell",
-            "description": "Move to the next Codex chat thread"
+            "type": "codexSidebarNavigate",
+            "direction": "next",
+            "description": "While held, open the next task in visual project-sidebar order"
           }
         },
         "x": {
@@ -604,8 +604,8 @@
           "edgeTrigger": true,
           "action": {
             "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    if (count of windows) is 0 then return\n    set uiItems to entire contents of window 1\n    repeat with uiItem in uiItems\n      try\n        if role of uiItem is \"AXTextArea\" then\n          set value of attribute \"AXFocused\" of uiItem to true\n          return\n        end if\n      end try\n    end repeat\n  end tell\nend tell",
-            "description": "Focus the Codex chat box"
+            "script": "tell application id \"com.openai.codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"ChatGPT\"\n    if (count of windows) is 0 then return\n    set uiItems to entire contents of window 1\n    repeat with uiItem in uiItems\n      try\n        if role of uiItem is \"AXTextArea\" then\n          set value of attribute \"AXFocused\" of uiItem to true\n          return\n        end if\n      end try\n    end repeat\n  end tell\nend tell",
+            "description": "Focus the ChatGPT chat box"
           }
         },
         "y": {
@@ -613,8 +613,8 @@
           "edgeTrigger": true,
           "action": {
             "type": "applescript",
-            "script": "tell application \"Codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"Codex\"\n    if (count of windows) is 0 then return\n    set uiItems to entire contents of window 1\n    repeat with uiItem in uiItems\n      try\n        if role of uiItem is \"AXTextArea\" then\n          set value of attribute \"AXFocused\" of uiItem to true\n          exit repeat\n        end if\n      end try\n    end repeat\n    delay 0.05\n    key code 0 using {command down}\n    delay 0.02\n    key code 51\n  end tell\nend tell",
-            "description": "Clear the Codex chat box"
+            "script": "tell application id \"com.openai.codex\" to activate\n\ndelay 0.08\n\ntell application \"System Events\"\n  tell process \"ChatGPT\"\n    if (count of windows) is 0 then return\n    set uiItems to entire contents of window 1\n    repeat with uiItem in uiItems\n      try\n        if role of uiItem is \"AXTextArea\" then\n          set value of attribute \"AXFocused\" of uiItem to true\n          exit repeat\n        end if\n      end try\n    end repeat\n    delay 0.05\n    key code 0 using {command down}\n    delay 0.02\n    key code 51\n  end tell\nend tell",
+            "description": "Clear the ChatGPT chat box"
           }
         }
       }

@@ -178,6 +178,8 @@ struct ActionConfig: Decodable {
 enum ActionType: String, Decodable {
     case keystroke
     case holdKeystroke
+    case repeatKeystroke
+    case codexSidebarNavigate
     case focusApp
     case focusDisplay
     case shell
@@ -372,9 +374,14 @@ struct ConfigLoader {
             if action.postKeyCode != nil, let postDelayMs = action.postDelayMs, postDelayMs < 0 {
                 throw BridgeError.configValidationFailed("\(context) keystroke action postDelayMs must be >= 0")
             }
-        case .holdKeystroke:
+        case .holdKeystroke, .repeatKeystroke:
             guard action.keyCode != nil else {
-                throw BridgeError.configValidationFailed("\(context) holdKeystroke action requires keyCode")
+                throw BridgeError.configValidationFailed("\(context) \(action.type.rawValue) action requires keyCode")
+            }
+        case .codexSidebarNavigate:
+            guard let direction = action.direction?.lowercased(),
+                  ["previous", "next"].contains(direction) else {
+                throw BridgeError.configValidationFailed("\(context) codexSidebarNavigate requires direction previous or next")
             }
         case .focusApp:
             guard let bundleID = action.bundleID, !bundleID.isEmpty else {
@@ -582,8 +589,8 @@ final class ActionExecutor {
             }
             print("[ACTION] keystroke keyCode=\(keyCodeValue) profile=\(profile) button=\(button)")
 
-        case .holdKeystroke:
-            throw BridgeError.actionExecutionFailed("holdKeystroke must be handled as press/release lifecycle")
+        case .holdKeystroke, .repeatKeystroke, .codexSidebarNavigate:
+            throw BridgeError.actionExecutionFailed("\(action.type.rawValue) must be handled as press/release lifecycle")
 
         case .focusApp:
             guard let bundleID = action.bundleID else {
@@ -665,9 +672,27 @@ final class ActionExecutor {
     }
 
     func beginHold(action: ActionConfig, profile: String, button: String) throws {
-        guard action.type == .holdKeystroke else {
-            throw BridgeError.actionExecutionFailed("beginHold requires holdKeystroke action")
+        guard action.type == .holdKeystroke || action.type == .repeatKeystroke || action.type == .codexSidebarNavigate else {
+            throw BridgeError.actionExecutionFailed("beginHold requires a held action")
         }
+        if action.type == .codexSidebarNavigate {
+            guard let direction = action.direction else {
+                throw BridgeError.actionExecutionFailed("codexSidebarNavigate action missing direction")
+            }
+            if dryRun {
+                print("[DRY-RUN] sidebar-navigate-begin profile=\(profile) button=\(button) direction=\(direction)")
+                return
+            }
+            try navigateCodexSidebar(direction: direction, profile: profile, source: button)
+            startCodexSidebarRepeatTimer(
+                holdKey: holdKey(profile: profile, button: button),
+                direction: direction,
+                profile: profile,
+                source: button
+            )
+            return
+        }
+
         guard let keyCodeValue = action.keyCode else {
             throw BridgeError.actionExecutionFailed("holdKeystroke action missing keyCode")
         }
@@ -683,6 +708,17 @@ final class ActionExecutor {
 
         let keyCode = CGKeyCode(keyCodeValue)
         let flags = modifierFlags(from: action.modifiers ?? [])
+        if action.type == .repeatKeystroke {
+            try postKeystroke(keyCode: keyCode, modifiers: flags)
+            startKeystrokeRepeatTimer(
+                holdKey: holdKey(profile: profile, button: button),
+                keyCode: keyCode,
+                modifiers: flags
+            )
+            print("[ACTION] repeat-begin keyCode=\(keyCodeValue) profile=\(profile) button=\(button)")
+            return
+        }
+
         try postKeyEvent(keyCode: keyCode, keyDown: true, modifiers: flags)
         if let heldFlag = modifierFlag(forHeldKeyCode: keyCode) {
             activeHeldModifierFlags.formUnion(heldFlag)
@@ -697,9 +733,19 @@ final class ActionExecutor {
     }
 
     func endHold(action: ActionConfig, profile: String, button: String) throws {
-        guard action.type == .holdKeystroke else {
-            throw BridgeError.actionExecutionFailed("endHold requires holdKeystroke action")
+        guard action.type == .holdKeystroke || action.type == .repeatKeystroke || action.type == .codexSidebarNavigate else {
+            throw BridgeError.actionExecutionFailed("endHold requires a held action")
         }
+        if action.type == .codexSidebarNavigate {
+            cancelHoldRepeatTimer(holdKey: holdKey(profile: profile, button: button))
+            if dryRun {
+                print("[DRY-RUN] sidebar-navigate-end profile=\(profile) button=\(button)")
+            } else {
+                print("[ACTION] sidebar-navigate-end profile=\(profile) button=\(button)")
+            }
+            return
+        }
+
         guard let keyCodeValue = action.keyCode else {
             throw BridgeError.actionExecutionFailed("holdKeystroke action missing keyCode")
         }
@@ -715,6 +761,11 @@ final class ActionExecutor {
 
         let keyCode = CGKeyCode(keyCodeValue)
         cancelHoldRepeatTimer(holdKey: holdKey(profile: profile, button: button))
+        if action.type == .repeatKeystroke {
+            print("[ACTION] repeat-end keyCode=\(keyCodeValue) profile=\(profile) button=\(button)")
+            return
+        }
+
         if let heldFlag = modifierFlag(forHeldKeyCode: keyCode) {
             activeHeldModifierFlags.remove(heldFlag)
         }
@@ -1086,6 +1137,50 @@ final class ActionExecutor {
         timer.resume()
     }
 
+    private func startKeystrokeRepeatTimer(holdKey: String, keyCode: CGKeyCode, modifiers: CGEventFlags) {
+        cancelHoldRepeatTimer(holdKey: holdKey)
+
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        timer.schedule(
+            deadline: .now() + .milliseconds(holdRepeatInitialDelayMs),
+            repeating: .milliseconds(holdRepeatIntervalMs)
+        )
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            do {
+                try self.postKeystroke(keyCode: keyCode, modifiers: modifiers)
+            } catch {
+                print("[ERROR] keystroke repeat failed: \(error.localizedDescription)")
+                self.cancelHoldRepeatTimer(holdKey: holdKey)
+            }
+        }
+        holdRepeatTimers[holdKey] = timer
+        timer.resume()
+    }
+
+    private func startCodexSidebarRepeatTimer(
+        holdKey: String,
+        direction: String,
+        profile: String,
+        source: String
+    ) {
+        cancelHoldRepeatTimer(holdKey: holdKey)
+
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        timer.schedule(deadline: .now() + .milliseconds(450), repeating: .milliseconds(320))
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            do {
+                try self.navigateCodexSidebar(direction: direction, profile: profile, source: source)
+            } catch {
+                print("[ERROR] sidebar navigation repeat failed: \(error.localizedDescription)")
+                self.cancelHoldRepeatTimer(holdKey: holdKey)
+            }
+        }
+        holdRepeatTimers[holdKey] = timer
+        timer.resume()
+    }
+
     private func cancelHoldRepeatTimer(holdKey: String) {
         guard let timer = holdRepeatTimers.removeValue(forKey: holdKey) else {
             return
@@ -1123,6 +1218,126 @@ final class ActionExecutor {
         throw BridgeError.actionExecutionFailed("Frontmost app has no accessible focused or main window")
     }
 
+    private struct CodexSidebarTask {
+        let element: AXUIElement
+        let name: String
+        let position: CGPoint
+    }
+
+    private func navigateCodexSidebar(direction: String, profile: String, source: String) throws {
+        if !AXIsProcessTrusted() {
+            throw BridgeError.actionExecutionFailed("Accessibility permission is required for Codex sidebar navigation")
+        }
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.openai.codex").first else {
+            throw BridgeError.actionExecutionFailed("ChatGPT is not running")
+        }
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        let window = try focusedOrMainWindow(for: appElement)
+        let windowFrame = try frame(for: window)
+        let sidebarRightEdge = windowFrame.minX + 220
+        var tasks: [CodexSidebarTask] = []
+        var headerValues: Set<String> = []
+
+        collectCodexSidebarElements(
+            from: window,
+            insideProjectTaskList: false,
+            sidebarRightEdge: sidebarRightEdge,
+            headerMaxY: windowFrame.minY + 80,
+            tasks: &tasks,
+            headerValues: &headerValues
+        )
+        tasks.sort { lhs, rhs in
+            if lhs.position.y == rhs.position.y {
+                return lhs.position.x < rhs.position.x
+            }
+            return lhs.position.y < rhs.position.y
+        }
+
+        guard !tasks.isEmpty else {
+            throw BridgeError.actionExecutionFailed("No accessible project tasks found in the Codex sidebar")
+        }
+        guard let currentIndex = tasks.firstIndex(where: { headerValues.contains($0.name) }) else {
+            throw BridgeError.actionExecutionFailed("Could not match the active Codex task to a sidebar row")
+        }
+
+        let offset = direction.lowercased() == "previous" ? -1 : 1
+        let targetIndex = currentIndex + offset
+        guard tasks.indices.contains(targetIndex) else {
+            print("[SKIP] sidebar boundary profile=\(profile) source=\(source) direction=\(direction)")
+            return
+        }
+
+        let target = tasks[targetIndex]
+        _ = AXUIElementPerformAction(target.element, "AXScrollToVisible" as CFString)
+        let result = AXUIElementPerformAction(target.element, kAXPressAction as CFString)
+        guard result == .success else {
+            throw BridgeError.actionExecutionFailed("Failed to open Codex sidebar task '\(target.name)' (AX error \(result.rawValue))")
+        }
+        print("[ACTION] sidebar-navigate direction=\(direction) task=\(target.name) profile=\(profile) button=\(source)")
+    }
+
+    private func collectCodexSidebarElements(
+        from element: AXUIElement,
+        insideProjectTaskList: Bool,
+        sidebarRightEdge: CGFloat,
+        headerMaxY: CGFloat,
+        tasks: inout [CodexSidebarTask],
+        headerValues: inout Set<String>
+    ) {
+        let role = copyAXString(element, attribute: kAXRoleAttribute as CFString) ?? ""
+        let description = copyAXString(element, attribute: kAXDescriptionAttribute as CFString) ?? ""
+        let roleDescription = copyAXString(element, attribute: kAXRoleDescriptionAttribute as CFString) ?? ""
+        let title = copyAXString(element, attribute: kAXTitleAttribute as CFString) ?? ""
+        let position = copyAXPoint(element, attribute: kAXPositionAttribute as CFString)
+        let isProjectTaskList = role == kAXListRole && description.hasPrefix("Scheduled tasks in ")
+        let isInsideProjectTaskList = insideProjectTaskList || isProjectTaskList
+
+        if isInsideProjectTaskList,
+           role == kAXButtonRole,
+           roleDescription == "button",
+           title.contains("Pin task"),
+           let position,
+           let taskName = firstStaticTextValue(in: element) {
+            tasks.append(CodexSidebarTask(element: element, name: taskName, position: position))
+            return
+        }
+
+        if role == kAXStaticTextRole,
+           let position,
+           position.x > sidebarRightEdge,
+           position.y <= headerMaxY,
+           let value = copyAXString(element, attribute: kAXValueAttribute as CFString),
+           !value.isEmpty {
+            headerValues.insert(value)
+        }
+
+        for child in copyAXElements(element, attribute: kAXChildrenAttribute as CFString) {
+            collectCodexSidebarElements(
+                from: child,
+                insideProjectTaskList: isInsideProjectTaskList,
+                sidebarRightEdge: sidebarRightEdge,
+                headerMaxY: headerMaxY,
+                tasks: &tasks,
+                headerValues: &headerValues
+            )
+        }
+    }
+
+    private func firstStaticTextValue(in element: AXUIElement) -> String? {
+        if copyAXString(element, attribute: kAXRoleAttribute as CFString) == kAXStaticTextRole,
+           let value = copyAXString(element, attribute: kAXValueAttribute as CFString),
+           !value.isEmpty {
+            return value
+        }
+        for child in copyAXElements(element, attribute: kAXChildrenAttribute as CFString) {
+            if let value = firstStaticTextValue(in: child) {
+                return value
+            }
+        }
+        return nil
+    }
+
     private func frame(for windowElement: AXUIElement) throws -> CGRect {
         guard let position = copyAXPoint(windowElement, attribute: kAXPositionAttribute as CFString),
               let size = copyAXSize(windowElement, attribute: kAXSizeAttribute as CFString) else {
@@ -1139,6 +1354,24 @@ final class ActionExecutor {
             return nil
         }
         return (value as! AXUIElement)
+    }
+
+    private func copyAXElements(_ element: AXUIElement, attribute: CFString) -> [AXUIElement] {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success, let value else {
+            return []
+        }
+        return value as? [AXUIElement] ?? []
+    }
+
+    private func copyAXString(_ element: AXUIElement, attribute: CFString) -> String? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success, let value else {
+            return nil
+        }
+        return value as? String
     }
 
     private func copyAXPoint(_ element: AXUIElement, attribute: CFString) -> CGPoint? {
@@ -2441,7 +2674,9 @@ final class ControllerBridge: NSObject {
         }
 
         let stateKey = "\(event.controllerID)::\(event.button)"
-        if resolved.mapping.action.type == .holdKeystroke {
+        if resolved.mapping.action.type == .holdKeystroke ||
+            resolved.mapping.action.type == .repeatKeystroke ||
+            resolved.mapping.action.type == .codexSidebarNavigate {
             do {
                 try actionExecutor.beginHold(action: resolved.mapping.action, profile: resolved.profileName, button: event.button)
                 activeHolds[stateKey] = (resolved.profileName, resolved.mapping.action)

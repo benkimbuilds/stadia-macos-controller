@@ -74,7 +74,7 @@ Behavior note:
 - `action` (`ActionConfig`): action to execute.
 
 ## ActionConfig
-- `type` (`"keystroke" | "holdKeystroke" | "focusApp" | "focusDisplay" | "shell" | "applescript" | "ghosttyAction" | "text" | "mouseClick"`)
+- `type` (`"keystroke" | "holdKeystroke" | "repeatKeystroke" | "codexSidebarNavigate" | "focusApp" | "focusDisplay" | "shell" | "applescript" | "ghosttyAction" | "text" | "mouseClick"`)
 - Keystroke fields:
   - `keyCode` (`int`, required)
   - `modifiers` (`string[]`, optional)
@@ -85,6 +85,13 @@ Behavior note:
   - `keyCode` (`int`, required)
   - `modifiers` (`string[]`, optional)
   - Behavior: key down on button press, key up on button release, with synthetic auto-repeat while held for non-modifier keys.
+- Repeat keystroke fields:
+  - `keyCode` (`int`, required)
+  - `modifiers` (`string[]`, optional)
+  - Behavior: complete key down/up shortcut taps on press and repeatedly while held. Use this for app menu commands that ignore held-key auto-repeat events.
+- Codex sidebar navigation fields:
+  - `direction` (`"previous" | "next"`, required)
+  - Behavior: reads accessible project task rows in their rendered sidebar order, skips project headings and empty projects, and opens the adjacent task repeatedly while held.
 - Focus app fields:
   - `bundleID` (`string`, required): bundle identifier of the running app whose active window should be focused.
 - Focus display fields:

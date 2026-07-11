@@ -75,11 +75,11 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
 ## Current Starter Mapping
 - App profile: `com.mitchellh.ghostty` -> `ghostty`
 - Always-on controls:
-  - `R2` (`rightTrigger`): hold `F12` (`holdKeystroke`)
-  - `L2` (`leftTrigger`): hold `Command`
-  - `X`: send `Tab` (`L2` + `X` behaves like `Cmd+Tab`)
-  - `L1` (`leftShoulder`): move to the previous macOS space/display
-  - `R1` (`rightShoulder`): move to the next macOS space/display
+  - `L2` (`leftTrigger`): move to the previous macOS space/display
+  - `R2` (`rightTrigger`): move to the next macOS space/display
+  - `L1` (`leftShoulder`): move to the previous app tab
+  - `R1` (`rightShoulder`): move to the next app tab
+  - `X`: send `Tab`
   - Left stick `Y`: vertical scroll (analog; deadzone/rate-limited)
     - when Ghostty is frontmost, scroll is sent to Ghostty's focused terminal directly so it follows tab/split focus instead of mouse cursor position
   - D-pad `Up/Down/Left/Right`: send arrow keys
@@ -93,7 +93,7 @@ swift run stadia-controller-bridge --config config/mappings.json --no-dry-run --
 Dictation stability note:
 - Auto-submit-on-release behavior is intentionally not configured for triggers.
 - Reason: dictation completion timing is asynchronous, so automatic `Enter` can submit partial/previous text.
-- Recommended pattern: keep trigger and submit separate (for example, trigger on `R2`, submit with a dedicated button).
+- Recommended pattern: keep dictation and submit on dedicated controls rather than overloading the screen-navigation triggers.
 
 Non-profiled apps:
 - If frontmost app is not mapped in `appProfiles`, only controls listed in `alwaysOn` still execute.
@@ -102,7 +102,7 @@ Non-profiled apps:
 Arc profile defaults:
 - Left stick moves the cursor.
 - Right stick scrolls vertically.
-- `L2` and `R2` send `Shift-Control-Tab` and `Control-Tab`.
+- `L1` and `R1` send `Shift-Control-Tab` and `Control-Tab`.
 - `B` clicks at the current cursor location.
 - `Y` copies the current page URL.
 - `X` refreshes the current page (`Cmd-R`).
@@ -120,13 +120,15 @@ Slack profile defaults:
 
 Codex profile defaults:
 - App profile: `com.openai.codex` -> `codex`
-- `L2`: hold `Cmd-Shift`, send `[`, then release to move to the previous Codex chat thread
-- `R2`: hold `Cmd-Shift`, send `]`, then release to move to the next Codex chat thread
-- `X`: focus the first accessible Codex text area in the active window
-- `Y`: focus the Codex chat box, select all draft text, and delete it
+- `L1`: while held, open the previous available task in visual project-sidebar order
+- `R1`: while held, open the next available task in visual project-sidebar order
+- `X`: focus the first accessible ChatGPT text area in the active window
+- `Y`: focus the ChatGPT chat box, select all draft text, and delete it
 
 Codex mapping note:
-- `X` and `Y` intentionally search the active Codex window for a text area at runtime instead of relying on a hardcoded Accessibility hierarchy path. That is more resilient to Codex UI layout changes.
+- The installed desktop app currently presents as `ChatGPT.app` but still uses bundle ID `com.openai.codex`. The app profile continues to match on that bundle ID.
+- `L1` and `R1` inspect the accessible project sidebar directly. They skip project headings and projects with no task rows, so navigation follows the visible task order instead of ChatGPT's incomplete Previous/Next Task history.
+- `X` and `Y` intentionally search the active ChatGPT window for a text area at runtime instead of relying on a hardcoded Accessibility hierarchy path. That is more resilient to desktop app UI layout changes.
 
 If your Ghostty split binding differs, edit `config/mappings.json`.
 For design intent behind the current layout, see `docs/references/ghostty-mapping-rationale.md`.

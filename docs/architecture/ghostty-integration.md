@@ -35,8 +35,9 @@ flowchart TD
 - Ghostty native actions:
   - `Options` -> `close_surface`
   - right thumbstick click -> `new_split:right`
-  - `L1` -> `goto_split:next`
-  - `R1` -> `next_tab`
+- Always-on navigation:
+  - `L1` / `R1` -> previous / next tab
+  - `L2` / `R2` -> previous / next macOS space
 - Ghostty AppleScript via shell helper:
   - `Share` -> run the shared helper that opens a new tab with custom startup config and immediately runs `codex_jump`
   - left thumbstick click -> run the shared helper that opens a right split with custom startup config and immediately runs `codex_jump`

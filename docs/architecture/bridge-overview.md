@@ -55,8 +55,10 @@ flowchart TD
 
 ## Action Types
 
-- `keystroke` / `holdKeystroke`
-  - generic macOS key injection; held keys synthesize repeat events while held so terminal apps see closer-to-real key hold behavior, and single keystrokes can optionally chain a delayed follow-up keystroke
+- `keystroke` / `holdKeystroke` / `repeatKeystroke`
+  - generic macOS key injection; held keys synthesize keyboard auto-repeat, repeated keystrokes emit complete shortcut taps for app menu commands, and single keystrokes can optionally chain a delayed follow-up keystroke
+- `codexSidebarNavigate`
+  - traverses accessible task rows under Codex project folders in their rendered sidebar order, independent of the app's Previous/Next Task history
 - `focusApp`
   - activates a specific running app and clicks its active window to pull focus onto that display
 - `focusDisplay`
